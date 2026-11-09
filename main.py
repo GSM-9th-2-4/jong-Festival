@@ -1,4 +1,4 @@
-"""Launcher: auto-discovers games/*.py, shows a menu, issues a coupon on win.
+"""Launcher: auto-discovers games/*.py, shows a menu, draws the prize, lets the game play it out.
 Adding a game = adding one file in games/. Nobody needs to edit this file."""
 import importlib
 import pkgutil
@@ -30,12 +30,19 @@ def text(screen, font, msg, y, color=(255, 255, 255)):
     screen.blit(s, s.get_rect(center=(W // 2, y)))
 
 
-def show_coupon(screen, font, code):
+def show_result(screen, font, prize, code):
+    big = pygame.font.SysFont("applegothic,malgungothic,nanumgothic", 72, bold=True)
     while True:
-        screen.fill((20, 60, 20))
-        text(screen, font, "축하합니다! 쿠폰 코드", 220)
-        text(screen, pygame.font.SysFont("applegothic,malgungothic,nanumgothic", 96), code, 320, (255, 230, 0))
-        text(screen, font, "스태프에게 보여주세요 (아무 키)", 450)
+        if code is None:
+            screen.fill((40, 40, 50))
+            text(screen, big, "꽝!", 260, (200, 200, 200))
+            text(screen, font, "다음 기회에~ (아무 키)", 380)
+        else:
+            screen.fill((20, 60, 20))
+            text(screen, font, "축하합니다!", 150)
+            text(screen, big, prize, 240, (255, 230, 0))
+            text(screen, big, code, 350)
+            text(screen, font, "스태프에게 보여주세요 (아무 키)", 470)
         pygame.display.flip()
         for e in pygame.event.get():
             if e.type == pygame.KEYDOWN:
@@ -75,13 +82,14 @@ def main():
     if not game_list:
         sys.exit("games/ 에 게임이 없음")
     while (g := menu(screen, font, game_list)) is not None:
+        prize = coupon.draw()  # 결과는 게임 시작 전에 확률표로 결정
         try:
-            won = g.play(screen)
+            done = g.play(screen, prize != coupon.LOSE)
         except Exception as e:
             print(f"[crash] {g.NAME}: {e}", file=sys.stderr)
-            won = False
-        if won:
-            show_coupon(screen, font, coupon.issue(g.NAME))
+            done = False
+        if done:  # ESC로 중간에 나가면 경품 없음
+            show_result(screen, font, prize, coupon.issue(g.NAME, prize))
     pygame.quit()
 
 
