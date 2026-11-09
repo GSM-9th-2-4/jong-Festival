@@ -1,6 +1,8 @@
 # 축제 미니게임 (할인 쿠폰)
 
-Python + pygame-ce. 부스 노트북 한 대에서 실행 → 게임 이기면 쿠폰 코드 화면 표시 + `coupons.csv` 기록.
+Python + pygame-ce. 부스 노트북 한 대에서 실행 → 확률표(`coupon.py`)로 경품 추첨 → 게임이 결과대로 연출 → 쿠폰 코드 표시 + `coupons.csv` 기록.
+
+확률: 꽝 50% / 대박(전액 면제) 2% / 500원 25% / 1,000원 15% / 2,000원 8%
 
 ## 실행
 ```
@@ -20,6 +22,6 @@ python main.py
 
 ## 게임 규칙
 - `NAME = "메뉴에 보일 이름"` (다른 게임과 중복 X)
-- `def play(screen) -> bool` — 승리 True, 패배/ESC False
-- `pygame.quit()`, `sys.exit()` 호출 금지 / 쿠폰 직접 발급 금지 (런처가 함)
+- `def play(screen, win) -> bool` — `win`(미리 뽑힌 결과)대로 연출. 끝까지 True, ESC False
+- `pygame.quit()`, `sys.exit()` 호출 금지 / 추첨/쿠폰 직접 처리 금지 (런처가 함)
 - 새 라이브러리 필요하면 `requirements.txt` 수정은 따로 PR로
