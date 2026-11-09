@@ -1,5 +1,4 @@
-"""페널티킥: 스페이스로 좌우 조준 → 높이 조준 → 슛. 5번 중 3골이면 승리.
-키퍼는 랜덤으로 왼/가운데/오른쪽을 막음. 위쪽 구석은 키퍼 손이 안 닿음(대신 골대 밖으로 나가기 쉬움).
+"""페널티킥: 스페이스 한 번 → 슛. 골/선방/빗나감은 런처가 넘겨준 win 대로 연출 (조준 없음).
 그래픽은 전부 코드로 그림 (에셋 파일 없음)."""
 import math
 import random
@@ -7,15 +6,12 @@ import random
 import pygame
 
 NAME = "페널티킥"
-SHOTS = 5
-GOAL_NEED = 3
-SWEEP_MS = 1100  # 조준 마커 왕복 시간. 작을수록 어려움
 FLY_MS = 550
+SAVE_RATIO = 0.7  # 꽝일 때 키퍼 선방 비율 (나머지는 빗나감)
 
 W, H = 800, 600
 GOAL = pygame.Rect(220, 150, 360, 170)  # 골문 앞 프레임, bottom = 골라인
 BACK = pygame.Rect(255, 168, 290, 140)  # 그물 뒤 프레임 (원근)
-AIM = pygame.Rect(GOAL.left - 40, GOAL.top - 40, GOAL.w + 80, GOAL.h + 32)  # 골대보다 넓음 → 빗나갈 수 있음
 SPOT = (400, 520)
 KEEPER_FEET_Y = 318
 DIVES = {  # 막는 범위, 회전 방향
@@ -26,11 +22,23 @@ DIVES = {  # 막는 범위, 회전 방향
 KOR = "applegothic,malgungothic,nanumgothic"
 
 
-def tri(now, lo, hi):
-    """lo~hi 사이를 왕복하는 값."""
-    p = (now % SWEEP_MS) / SWEEP_MS
-    p = 2 * p if p < 0.5 else 2 - 2 * p
-    return lo + (hi - lo) * p
+def pick_shot(win, rng=random):
+    """(키퍼 다이브 방향, 슛 목표 x, y, 결과). 결과는 win 그대로."""
+    dive = rng.choice(list(DIVES))
+    hit = DIVES[dive][0]
+    if win:  # 골대 안 + 키퍼 범위 밖
+        while True:
+            x, y = rng.uniform(GOAL.left + 20, GOAL.right - 20), rng.uniform(GOAL.top + 20, GOAL.bottom - 15)
+            if not hit.collidepoint(x, y):
+                return dive, x, y, "goal"
+    if rng.random() < SAVE_RATIO:  # 키퍼 정면
+        r = hit.inflate(-30, -30)
+        return dive, rng.uniform(r.left, r.right), rng.uniform(r.top, r.bottom), "save"
+    if rng.random() < 0.5:  # 크로스바 위
+        return dive, rng.uniform(GOAL.left + 30, GOAL.right - 30), GOAL.top - rng.uniform(20, 40), "miss"
+    side = rng.choice((-1, 1))
+    x = GOAL.left - rng.uniform(20, 40) if side < 0 else GOAL.right + rng.uniform(20, 40)
+    return dive, x, rng.uniform(GOAL.top + 30, GOAL.bottom - 20), "miss"
 
 
 def lerp(a, b, t):
@@ -192,29 +200,15 @@ def draw_ball(screen, img, pos, r, angle):
     screen.blit(b, b.get_rect(center=pos[:2]))
 
 
-def draw_reticle(screen, x, y, now):
-    r = 16 + 2 * math.sin(now / 90)
-    pygame.draw.circle(screen, (255, 70, 70), (x, y), r, 3)
-    pygame.draw.circle(screen, (255, 70, 70), (x, y), 3)
-    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        pygame.draw.line(screen, (255, 255, 255), (x + dx * (r - 6), y + dy * (r - 6)), (x + dx * (r + 6), y + dy * (r + 6)), 2)
-
-
-def draw_hud(screen, fonts, goals, hist, state):
-    panel = pygame.Surface((310, 60), pygame.SRCALPHA)
+def draw_hud(screen, fonts, state):
+    panel = pygame.Surface((260, 60), pygame.SRCALPHA)
     pygame.draw.rect(panel, (10, 14, 28, 215), panel.get_rect(), border_radius=10)
     pygame.draw.rect(panel, (255, 140, 20), (0, 0, 6, 60), border_top_left_radius=10, border_bottom_left_radius=10)
     panel.blit(fonts["small"].render("FESTIVAL CUP · 승부차기", True, (160, 170, 190)), (18, 7))
-    panel.blit(fonts["mid"].render(f"골 {goals} / {GOAL_NEED}", True, (255, 255, 255)), (18, 26))
-    for i in range(SHOTS):
-        c = (170 + i * 26, 40)
-        if i < len(hist):
-            pygame.draw.circle(panel, (60, 220, 120) if hist[i] == "goal" else (240, 70, 70), c, 8)
-        else:
-            pygame.draw.circle(panel, (120, 125, 140), c, 8, 2)
+    panel.blit(fonts["mid"].render("단 한 번의 슛!", True, (255, 255, 255)), (18, 26))
     screen.blit(panel, (16, 16))
-    tip = {"aim_x": "SPACE  ·  좌우 조준", "aim_y": "SPACE  ·  높이 정하고 슛!"}.get(state)
-    if tip:
+    if state == "ready":
+        tip = "SPACE  ·  슛!"
         t = fonts["mid"].render(tip, True, (255, 255, 255))
         pill = pygame.Surface((t.get_width() + 40, 40), pygame.SRCALPHA)
         pygame.draw.rect(pill, (0, 0, 0, 160), pill.get_rect(), border_radius=20)
@@ -224,7 +218,7 @@ def draw_hud(screen, fonts, goals, hist, state):
 
 # ---------- 게임 ----------
 
-def play(screen) -> bool:
+def play(screen, win: bool) -> bool:
     clock = pygame.time.Clock()
     fonts = {"small": pygame.font.SysFont(KOR, 14), "mid": pygame.font.SysFont(KOR, 22, bold=True)}
     big = pygame.font.SysFont("arialblack,impact", 100)
@@ -234,45 +228,28 @@ def play(screen) -> bool:
                "save": outlined(big, "SAVED!", (120, 190, 255)),
                "miss": outlined(big, "MISS", (255, 90, 90))}
 
-    goals, hist = 0, []
-    state, t0 = "aim_x", pygame.time.get_ticks()
-    tx = ty = 0.0
-    dive, sway0 = "center", 0.0
+    state, t0 = "ready", pygame.time.get_ticks()
+    dive, tx, ty, res = pick_shot(win)  # 결과는 시작 전에 정해짐
+    sway0 = 0.0
     confetti = []
-    ball_end = (tx, ty, 7)
 
     while True:
         now = pygame.time.get_ticks()
         for e in pygame.event.get():
             if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE):
                 return False
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
-                if state == "aim_x":
-                    tx, state, t0 = tri(now - t0, AIM.left, AIM.right), "aim_y", now
-                elif state == "aim_y":
-                    ty, state, t0 = tri(now - t0, AIM.top, AIM.bottom), "fly", now
-                    dive, sway0 = random.choice(list(DIVES)), 12 * math.sin(now / 250)
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE and state == "ready":
+                state, t0, sway0 = "fly", now, 12 * math.sin(now / 250)
 
         # 상태 진행
         if state == "fly" and now - t0 > FLY_MS:
-            if not GOAL.collidepoint(tx, ty):
-                res = "miss"
-            elif DIVES[dive][0].collidepoint(tx, ty):
-                res = "save"
-            else:
-                res = "goal"
-                goals += 1
+            if res == "goal":
                 confetti = [[400, 230, random.uniform(-7, 7), random.uniform(-9, -2),
                              random.choice([(255, 215, 0), (255, 80, 80), (90, 200, 255), (255, 255, 255)])]
                             for _ in range(120)]
-            hist.append(res)
             state, t0 = "result", now
-        elif state == "result" and now - t0 > 1300:
-            if goals >= GOAL_NEED:
-                return True
-            if len(hist) >= SHOTS or goals + (SHOTS - len(hist)) < GOAL_NEED:
-                return False  # 남은 슛 다 넣어도 못 이기면 바로 종료
-            state, t0 = "aim_x", now
+        elif state == "result" and now - t0 > 1600:
+            return True
 
         # 공 위치 (x, y, 그림자위치), 반지름, 회전
         el = now - t0
@@ -329,15 +306,6 @@ def play(screen) -> bool:
         if ball and not (state == "result" and res == "goal"):
             draw_ball(screen, ball_img, *ball)
 
-        if state == "aim_x":
-            x = tri(el, AIM.left, AIM.right)
-            pygame.draw.line(screen, (255, 120, 120), (x, AIM.top), (x, AIM.bottom), 1)
-            draw_reticle(screen, x, GOAL.centery, now)
-        elif state == "aim_y":
-            y = tri(el, AIM.top, AIM.bottom)
-            pygame.draw.line(screen, (255, 120, 120), (AIM.left, y), (AIM.right, y), 1)
-            draw_reticle(screen, tx, y, now)
-
         for p in confetti:
             p[0] += p[2]
             p[1] += p[3]
@@ -349,6 +317,6 @@ def play(screen) -> bool:
             sc = 1.5 - 0.5 * ease(el / 200)
             b = pygame.transform.rotozoom(banners[res], 0, sc)
             screen.blit(b, b.get_rect(center=(400, 430)))
-        draw_hud(screen, fonts, goals, hist, state)
+        draw_hud(screen, fonts, state)
         pygame.display.flip()
         clock.tick(60)
