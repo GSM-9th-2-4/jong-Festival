@@ -448,17 +448,20 @@ def _run(screen, win, clock, art, canvas, fx, show):
                     ui.GOLD if step == 3 else ui.WHITE, outline=6, scale=1.6 - 0.6 * ui.ease_out(k * 2.5))
             ui.pill(screen, "나오는 두더지를 망치로 쾅!  (마우스 · 터치 · 숫자키)", (400, 560))
         elif phase == "pick":
-            ui.text(screen, "마지막 한 방!", 66, (400, 84), ui.GOLD, outline=5, scale=ui.out_back(el / 300))
+            ui.text(screen, "마지막 한 방!", 68, (400, 84), metal=(ui.GOLD_TOP, ui.GOLD_BOT), glow=(255, 140, 20), outline=3,
+                    scale=max(0.01, ui.out_back(el / 300)))
             ui.text(screen, f"{score}마리 잡았어요 · 빛나는 구멍 하나를 골라 쾅!", 24, (400, 150), ui.WHITE)
         elif phase == "suspense":
             ui.text(screen, "두구두구두구…", 60, (400, 100), ui.WHITE, outline=5, scale=1 + 0.05 * math.sin(now / 40))
         elif phase == "reveal":
             if win:
                 t = ui.TIERS[tier]
-                ui.text(screen, TITLE[tier], 66 if tier < 3 else 56, (400, 92), t["c"], outline=6, scale=ui.out_back(el / 300))
+                ui.text(screen, TITLE[tier], 66 if tier < 3 else 56, (400, 92), outline=3, glow=t["c"],
+                        metal=((255, 255, 255), tuple(min(255, v + 40) for v in t["c"])), scale=max(0.01, ui.out_back(el / 300)))
                 ui.text(screen, f"{t['kor']} 등급!   {show.prize}", 32, (400, 164), ui.WHITE, outline=3)
             else:
-                ui.text(screen, "꽝 두더지…", 76, (400, 96), (200, 206, 235), outline=6, scale=ui.out_back(el / 300))
+                ui.text(screen, "꽝 두더지…", 76, (400, 96), outline=3, metal=((226, 232, 250), (120, 132, 180)),
+                        scale=max(0.01, ui.out_back(el / 300)))
                 ui.text(screen, "메롱~ 다음 기회에!", 30, (400, 168), ui.WHITE, outline=3)
         pygame.display.flip()
         clock.tick(60)

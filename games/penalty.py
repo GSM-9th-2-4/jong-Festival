@@ -144,17 +144,6 @@ def make_ball():
     return s
 
 
-def outlined(font, msg, color, ow=4):
-    base = font.render(msg, True, color)
-    black = font.render(msg, True, (0, 0, 0))
-    out = pygame.Surface((base.get_width() + ow * 2, base.get_height() + ow * 2), pygame.SRCALPHA)
-    for dx in (-ow, 0, ow):
-        for dy in (-ow, 0, ow):
-            out.blit(black, (ow + dx, ow + dy))
-    out.blit(base, (ow, ow))
-    return out
-
-
 # ---------- 매 프레임 그리기 ----------
 
 def draw_net(layer, hit, amp):
@@ -219,12 +208,11 @@ def draw_hud(screen, state, now):
 
 def play(screen, win: bool, prize: str = None) -> bool:
     clock = pygame.time.Clock()
-    big = pygame.font.SysFont("arialblack,impact", 100)
     bg, keeper_img, ball_img = make_bg(), make_keeper(), make_ball()
     layer = pygame.Surface((W, H), pygame.SRCALPHA)
-    banners = {"goal": outlined(big, "GOAL!", (255, 215, 0)),
-               "save": outlined(big, "SAVED!", (120, 190, 255)),
-               "miss": outlined(big, "MISS", (255, 90, 90))}
+    banners = {"goal": ui.render("GOAL!", 132, en=True, spacing=6, metal=((255, 252, 220), (255, 176, 30)), glow=(255, 140, 20), shadow=False),
+               "save": ui.render("SAVED!", 120, en=True, spacing=6, metal=((235, 246, 255), (90, 160, 255)), glow=(40, 110, 255), shadow=False),
+               "miss": ui.render("MISS", 120, en=True, spacing=6, metal=((255, 236, 236), (240, 80, 90)), glow=(220, 40, 60), shadow=False)}
 
     state, t0 = "ready", pygame.time.get_ticks()
     dive, tx, ty, res = pick_shot(win)  # 결과는 시작 전에 정해짐
@@ -337,9 +325,14 @@ def play(screen, win: bool, prize: str = None) -> bool:
         confetti = [p for p in confetti if p[1] < H]
 
         if state == "result":
+            band = pygame.Surface((W, 120))
+            band.set_alpha(int(120 * ease(el / 200)))
+            screen.blit(band, (0, 372))
+            ui.flare(screen, (400, 372), int(780 * ease(el / 300)) + 2, ui.WHITE, 220)
+            ui.flare(screen, (400, 492), int(780 * ease(el / 300)) + 2, ui.WHITE, 220)
             sc = 1.5 - 0.5 * ease(el / 200)
             b = pygame.transform.rotozoom(banners[res], 0, sc)
-            screen.blit(b, b.get_rect(center=(400, 430)))
+            screen.blit(b, b.get_rect(center=(400, 436)))
         show.draw(screen, now)
         draw_hud(screen, state, now)
         shake = max(0.0, 1 - (now - shake_at) / 220) * 7
