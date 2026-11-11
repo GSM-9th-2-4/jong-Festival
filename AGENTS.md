@@ -39,7 +39,9 @@ def thumbnail() -> pygame.Surface:    # 선택. 메뉴 카드 그림 (비율 8:5
 - 시간은 `pygame.time.get_ticks()` / `pygame.time.Clock` 으로만 (테스트가 시간을 빨리 감음. `time.sleep` 금지)
 - 키보드 없이도(마우스 클릭/터치만으로) 끝까지 갈 수 있게 만들기
 - `pygame.quit()`, `sys.exit()`, `pygame.display.set_mode()` 호출 금지
-- 추첨/쿠폰 직접 처리 금지 — 런처가 처리. `core.app` import 금지, `core.store` 는 `PRIZES`/`LOSE` **읽기만** 가능 (`Store`, 추첨, 기록 금지). `core.ui`, `core.sfx` 는 써도 됨
+- 추첨/쿠폰 직접 처리 금지 — 런처가 처리. `core.app` import 금지, `core.store` 는 `PRIZES`/`LOSE`/`rank()` **읽기만** 가능 (`Store`, 추첨, 기록 금지). `core.ui`, `core.sfx` 는 써도 됨
+- 당첨 연출은 공용 `ui.TierShow(등급, 경품이름)` 를 쓰면 등급 배너 + 폭죽이 등급에 맞게 나옴 (등급 = `core.store.rank(prize)`, `games/penalty.py` 참고)
+- 글자는 `ui.text(...)` 로: `en=True`(영문 전용 글꼴), `spacing`(자간), `metal=(위색, 아래색)`, `glow=색`, `outline=2`(배경 위 가독성)
 - 에셋 경로는 `Path(__file__).parent / "assets" / "<내게임>"` 기준
 
 ## 확인
