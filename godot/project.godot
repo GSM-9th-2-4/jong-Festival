@@ -16,3 +16,7 @@ window/stretch/aspect="keep"
 anti_aliasing/quality/msaa_3d=2
 anti_aliasing/quality/screen_space_aa=1
 environment/defaults/default_clear_color=Color(0.01, 0.01, 0.02, 1)
+
+[autoload]
+Kit="*res://core/kit.gd"
+Store="*res://core/store.gd"
