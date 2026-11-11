@@ -209,6 +209,7 @@ func celebrate(rank: int, prize: String, banner := true) -> float:
 	if rank == 0:
 		return 0.0
 	var t: Dictionary = TIERS[rank]
+	var col: Color = t["color"]
 	var dur := 2.4 + 0.8 * rank
 	var layer := CanvasLayer.new()
 	layer.layer = 50
@@ -219,70 +220,146 @@ func celebrate(rank: int, prize: String, banner := true) -> float:
 	if rank >= 3:
 		sfx("cheer", -3.0)
 
-	var flash := ColorRect.new()  # 번쩍
-	flash.color = Color(1, 1, 1, 0.8)
+	var flash := ColorRect.new()  # 번쩍 (등급 색이 살짝 도는 흰빛)
+	flash.color = Color(col.lerp(Color.WHITE, 0.7), 0.6)
 	flash.size = size
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(flash)
-	create_tween().tween_property(flash, "color:a", 0.0, 0.35)
+	create_tween().tween_property(flash, "color:a", 0.0, 0.45).set_ease(Tween.EASE_OUT)
 
 	if banner:
-		var box := VBoxContainer.new()
-		box.alignment = BoxContainer.ALIGNMENT_CENTER
-		box.size = Vector2(size.x, 260)
-		box.position = Vector2(0, size.y * 0.5 - 150)
-		box.pivot_offset = box.size / 2
-		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		layer.add_child(box)
+		var band_h := 250.0
+		var band := Control.new()  # 화면을 가로지르는 어두운 띠 + 등급 색 가는 선
+		band.size = Vector2(size.x, band_h)
+		band.position = Vector2(0, size.y * 0.5 - band_h * 0.5 - 20.0)
+		band.pivot_offset = band.size / 2
+		band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		layer.add_child(band)
+		var bg := _celebrate_strip(Color(0.01, 0.012, 0.03, 0.82), Vector2(size.x, band_h))
+		band.add_child(bg)
+		for y in [0.0, band_h - 2.0]:
+			var line := _celebrate_strip(col.lerp(Color.WHITE, 0.25), Vector2(size.x, 2))
+			line.position.y = y
+			band.add_child(line)
 		var big := Label.new()
-		big.text = t["name"] + "!".repeat(rank)
+		big.text = t["name"]
 		big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		big.label_settings = label_settings(150, (t["color"] as Color).lerp(Color.WHITE, 0.35), true, 14)
-		box.add_child(big)
+		var ls := label_settings(138, col.lerp(Color.WHITE, 0.3), true)
+		var fv := FontVariation.new()
+		fv.base_font = font_en()
+		fv.spacing_glyph = 14
+		ls.font = fv
+		ls.shadow_size = 2
+		ls.shadow_color = Color(col.darkened(0.7), 0.9)
+		ls.shadow_offset = Vector2(0, 5)
+		big.label_settings = ls
+		big.size = Vector2(size.x, 150)
+		big.position = Vector2(0, 26)
+		big.pivot_offset = big.size / 2
+		big.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		band.add_child(big)
 		var sub := Label.new()
 		sub.text = "%s 등급   ·   %s" % [t["kor"], prize]
 		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sub.label_settings = label_settings(40, Color.WHITE, false, 8)
-		box.add_child(sub)
-		box.scale = Vector2(2.6, 2.6)
-		box.modulate.a = 0.0
+		sub.label_settings = label_settings(38, Color(1, 1, 1, 0.96))
+		sub.size = Vector2(size.x, 50)
+		sub.position = Vector2(0, 172)
+		sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		band.add_child(sub)
+		band.scale = Vector2(1.0, 0.0)
+		big.scale = Vector2(1.5, 1.5)
+		big.modulate.a = 0.0
+		sub.modulate.a = 0.0
 		var tw := create_tween()
-		tw.tween_property(box, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.parallel().tween_property(box, "modulate:a", 1.0, 0.1)
-		tw.tween_interval(1.1)
-		tw.tween_property(box, "modulate:a", 0.0, 0.3)
+		tw.tween_property(band, "scale:y", 1.0, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(big, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(big, "modulate:a", 1.0, 0.14)
+		tw.parallel().tween_property(sub, "modulate:a", 1.0, 0.3).set_delay(0.22)
+		tw.tween_interval(maxf(1.0, dur - 1.6))
+		tw.tween_property(band, "modulate:a", 0.0, 0.35)
 
 	var shots := 2 + rank * 4  # 폭죽: 등급이 높을수록 많이
 	for i in shots:
 		var delay := 0.1 + (dur - 1.2) * i / shots + randf() * 0.15
-		get_tree().create_timer(delay).timeout.connect(_firework.bind(layer, size, t["color"], rank))
+		get_tree().create_timer(delay).timeout.connect(_firework.bind(layer, size, col, rank))
 	get_tree().create_timer(dur + 1.6).timeout.connect(layer.queue_free)
 	return dur
+
+
+func _celebrate_strip(color: Color, size: Vector2) -> TextureRect:  # 양 끝이 스르륵 사라지는 가로 띠
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.22, 0.78, 1.0])
+	g.colors = PackedColorArray([Color(color, 0.0), color, color, Color(color, 0.0)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.width = 256
+	gt.height = 4
+	var r := TextureRect.new()
+	r.texture = gt
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_SCALE
+	r.size = size
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+
+func _celebrate_dot() -> Texture2D:  # 폭죽 불꽃 하나 (부드러운 원)
+	if not _tex_cache.has("_dot"):
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.35, 1.0])
+		g.colors = PackedColorArray([Color.WHITE, Color(1, 1, 1, 0.75), Color(1, 1, 1, 0.0)])
+		var gt := GradientTexture2D.new()
+		gt.gradient = g
+		gt.fill = GradientTexture2D.FILL_RADIAL
+		gt.fill_from = Vector2(0.5, 0.5)
+		gt.fill_to = Vector2(1.0, 0.5)
+		gt.width = 32
+		gt.height = 32
+		_tex_cache["_dot"] = gt
+	return _tex_cache["_dot"]
 
 
 func _firework(layer: CanvasLayer, size: Vector2, color: Color, rank: int) -> void:
 	if not is_instance_valid(layer):
 		return
-	var c := color if rank < TOP_TIER else Color.from_hsv(randf(), 0.8, 1.0)
-	var p := CPUParticles2D.new()
-	p.position = Vector2(randf_range(size.x * 0.1, size.x * 0.9), randf_range(size.y * 0.1, size.y * 0.45))
-	p.one_shot = true
-	p.explosiveness = 1.0
-	p.amount = 90
-	p.lifetime = 1.3
-	p.spread = 180.0
-	p.initial_velocity_min = 180.0
-	p.initial_velocity_max = 420.0
-	p.damping_min = 160.0
-	p.damping_max = 260.0
-	p.gravity = Vector2(0, 260)
-	p.scale_amount_min = 3.0
-	p.scale_amount_max = 6.0
-	var g := Gradient.new()
-	g.set_color(0, Color.WHITE)
-	g.add_point(0.25, c)
-	g.set_color(g.get_point_count() - 1, Color(c.r, c.g, c.b, 0.0))
-	p.color_ramp = g
-	layer.add_child(p)
-	p.emitting = true
+	var c := color.lerp(Color.WHITE, randf() * 0.25) if rank < TOP_TIER else Color.from_hsv(randf(), 0.75, 1.0)
+	var at := Vector2(randf_range(size.x * 0.1, size.x * 0.9), randf_range(size.y * 0.08, size.y * 0.42))
+	var add := CanvasItemMaterial.new()
+	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	for pass_i in 2:  # 0 = 퍼지는 불꽃, 1 = 가운데 반짝임
+		var p := CPUParticles2D.new()
+		p.position = at
+		p.material = add
+		p.texture = _celebrate_dot()
+		p.one_shot = true
+		p.explosiveness = 1.0
+		p.spread = 180.0
+		var g := Gradient.new()
+		if pass_i == 0:
+			p.amount = 110
+			p.lifetime = 1.5
+			p.initial_velocity_min = 140.0
+			p.initial_velocity_max = 470.0
+			p.damping_min = 170.0
+			p.damping_max = 280.0
+			p.gravity = Vector2(0, 230)
+			p.scale_amount_min = 0.22
+			p.scale_amount_max = 0.5
+			g.set_color(0, Color.WHITE)
+			g.add_point(0.2, c)
+			g.add_point(0.7, Color(c, 0.7))
+		else:
+			p.amount = 28
+			p.lifetime = 0.7
+			p.initial_velocity_min = 20.0
+			p.initial_velocity_max = 110.0
+			p.gravity = Vector2.ZERO
+			p.scale_amount_min = 0.5
+			p.scale_amount_max = 1.5
+			g.set_color(0, Color(1, 1, 1, 0.9))
+			g.add_point(0.3, Color(c, 0.6))
+		g.set_color(g.get_point_count() - 1, Color(c.r, c.g, c.b, 0.0))
+		p.color_ramp = g
+		layer.add_child(p)
+		p.emitting = true
 	sfx("firework", -6.0)
