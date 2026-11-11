@@ -71,7 +71,7 @@ def test_games_follow_contract():
         short = mod.__name__
         assert isinstance(getattr(mod, "NAME", None), str), f"{short}: NAME 없음"
         assert callable(getattr(mod, "play", None)), f"{short}: play() 없음"
-        assert len(inspect.signature(mod.play).parameters) == 2, f"{short}: play(screen, win) 형태여야 함"
+        assert len(inspect.signature(mod.play).parameters) in (2, 3), f"{short}: play(screen, win[, prize]) 형태여야 함"
         if not short.split(".")[-1].startswith("_"):
             names.append(mod.NAME)
     assert len(names) == len(set(names)), f"NAME 중복: {names}"
@@ -81,9 +81,13 @@ def test_games_run_to_the_end():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
     for mod in all_games():
-        for win in (True, False):
+        if len(inspect.signature(mod.play).parameters) == 3:  # 경품 이름까지 받는 게임: 모든 경품으로 돌려봄
+            cases = [(p.name != store.LOSE, p.name) for p in store.PRIZES]
+        else:
+            cases = [(True,), (False,)]
+        for case in cases:
             with FastForward():
-                assert mod.play(screen, win) is True, f"{mod.__name__}: 끝까지 했는데 True 가 아님 (win={win})"
+                assert mod.play(screen, *case) is True, f"{mod.__name__}: 끝까지 했는데 True 가 아님 {case}"
         pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
         with FastForward():
             assert mod.play(screen, True) is False, f"{mod.__name__}: ESC 누르면 False 여야 함"

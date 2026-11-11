@@ -5,6 +5,7 @@
 키: F1 관리자(PIN) · F11 전체화면 · 결과 화면에서 F2 = 그 자리에서 쿠폰 사용 처리
 """
 import importlib
+import inspect
 import math
 import os
 import pkgutil
@@ -265,7 +266,10 @@ class App:
         prize = self.pending
         ui.fade(self.screen, self.clock)
         try:
-            done = bool(g.mod.play(self.screen, prize != LOSE))
+            args = (self.screen, prize != LOSE)
+            if len(inspect.signature(g.mod.play).parameters) >= 3:  # 경품 이름까지 받는 게임 (예: 룰렛)
+                args += (prize,)
+            done = bool(g.mod.play(*args))
         except Exception:
             traceback.print_exc()
             done = False

@@ -100,11 +100,21 @@ RECIPES = {
     "lose": lambda: _seq(_tone(392, 260, 0.25, "saw", to=370, decay=1.5), _tone(330, 260, 0.25, "saw", to=311, decay=1.5),
                          _tone(262, 620, 0.25, "saw", to=196, decay=2, vib=6)),
     "error": lambda: _tone(160, 220, 0.3, "square", decay=2),
+    "boom": lambda: _mix(_noise(500, 0.7, decay=5, smooth=0.85), _tone(110, 600, 0.7, "sine", to=36, decay=4),
+                         _noise(90, 0.5, decay=8)),
+    "riser": lambda: _mix(_tone(180, 1100, 0.14, "saw", to=1500, decay=-1.2), _noise(1100, 0.1, decay=-1.5, smooth=0.5)),
+    "heart": lambda: _seq(_tone(70, 110, 0.7, "sine", to=45, decay=3), _gap(60), _tone(60, 140, 0.55, "sine", to=40, decay=3)),
+    "zap": lambda: _mix(_noise(260, 0.45, decay=6, smooth=0.1), _tone(1900, 260, 0.25, "square", to=160, decay=4)),
 }
+for _lv, _root in enumerate((C5, E5, G5, C6), 1):  # 등급 상승 징글: 등급이 높을수록 높은 음
+    RECIPES[f"tier{_lv}"] = (lambda r=_root, n=_lv: _seq(
+        _notes([r * 2 ** (k * 4 / 12) for k in range(n + 2)], 70, vol=0.24),
+        _mix(_tone(r * 2, 520, 0.22, "square", decay=3), _tone(r * 3, 520, 0.14, "square", decay=3))))
 
 
 def play(name, volume=1.0):
-    """등록된 효과음 재생. 이름: move click tick go pop swing hit kick whistle net cheer groan coin drum win jackpot lose error"""
+    """등록된 효과음 재생. 이름: move click tick go pop swing hit kick whistle net cheer groan coin drum win jackpot lose error
+    boom riser heart zap tier1~tier4"""
     if not _ready():
         return None
     if name not in _cache:

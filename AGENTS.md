@@ -29,6 +29,7 @@ COLOR = (90, 190, 255)      # 선택. 썸네일 없을 때 카드 색
 def play(screen, win: bool) -> bool:  # 필수. screen: 800x600 Surface
     ...  # win: 런처가 확률표로 미리 정한 결과. 게임은 거기 맞춰 연출만
          # 끝까지 진행 True, ESC/창닫기 False (경품 없음)
+# 경품 이름까지 필요하면 (예: 룰렛) play(screen, win, prize=None) — 런처가 세 번째로 경품 이름을 넘겨줌
 
 def thumbnail() -> pygame.Surface:    # 선택. 메뉴 카드 그림 (비율 8:5 권장)
     ...
@@ -38,7 +39,7 @@ def thumbnail() -> pygame.Surface:    # 선택. 메뉴 카드 그림 (비율 8:5
 - 시간은 `pygame.time.get_ticks()` / `pygame.time.Clock` 으로만 (테스트가 시간을 빨리 감음. `time.sleep` 금지)
 - 키보드 없이도(마우스 클릭/터치만으로) 끝까지 갈 수 있게 만들기
 - `pygame.quit()`, `sys.exit()`, `pygame.display.set_mode()` 호출 금지
-- 추첨/쿠폰 직접 처리 금지 (`core.store`, `core.app` import 금지) — 런처가 처리. `core.ui`, `core.sfx` 는 써도 됨
+- 추첨/쿠폰 직접 처리 금지 — 런처가 처리. `core.app` import 금지, `core.store` 는 `PRIZES`/`LOSE` **읽기만** 가능 (`Store`, 추첨, 기록 금지). `core.ui`, `core.sfx` 는 써도 됨
 - 에셋 경로는 `Path(__file__).parent / "assets" / "<내게임>"` 기준
 
 ## 확인
