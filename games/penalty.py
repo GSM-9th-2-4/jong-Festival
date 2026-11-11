@@ -1,4 +1,5 @@
 """페널티킥: 스페이스(또는 클릭/터치) 한 번 → 슛. 골/선방/빗나감은 런처가 넘겨준 win 대로 연출 (조준 없음).
+골이면 경품 등급(레어~크리티컬)이 터지고, 등급이 높을수록 폭죽이 많이 터짐. 공 꼬리 색도 등급 색.
 그래픽은 전부 코드로 그림 (에셋 파일 없음)."""
 import math
 import random
@@ -6,6 +7,7 @@ import random
 import pygame
 
 from core import sfx, ui
+from core.store import rank as prize_rank  # 읽기 전용
 
 NAME = "페널티킥"
 TAGLINE = "단 한 번의 슛!"
@@ -215,7 +217,7 @@ def draw_hud(screen, state, now):
 
 # ---------- 게임 ----------
 
-def play(screen, win: bool) -> bool:
+def play(screen, win: bool, prize: str = None) -> bool:
     clock = pygame.time.Clock()
     big = pygame.font.SysFont("arialblack,impact", 100)
     bg, keeper_img, ball_img = make_bg(), make_keeper(), make_ball()
@@ -229,6 +231,9 @@ def play(screen, win: bool) -> bool:
     sway0 = 0.0
     confetti = []
     shake_at = -9999
+    tier = min(ui.TOP_TIER, prize_rank(prize)) if prize else int(win)  # 경품 이름을 못 받으면 당첨=1등급
+    show = ui.TierShow(tier if win else 0, prize or "당첨!", center=(400, 236))
+    trail = []
     sfx.play("whistle")
 
     while True:
@@ -258,7 +263,10 @@ def play(screen, win: bool) -> bool:
                     shake_at = now
                     sfx.play("hit", 0.6)
                 sfx.play("groan")
-        elif state == "result" and now - t0 > 2000:
+        elif state == "result" and res == "goal" and not show.started and now - t0 > 750:
+            show.start(now)  # GOAL! 다음 박자에 등급이 터짐
+            shake_at = now
+        elif state == "result" and now - t0 > 2000 + (show.duration if res == "goal" else 0):
             return True
 
         # 공 위치 (x, y, 그림자위치), 반지름, 회전
@@ -270,6 +278,7 @@ def play(screen, win: bool) -> bool:
             x = lerp(SPOT[0], tx, k) + (tx - 400) * 0.15 * math.sin(math.pi * k)
             y = lerp(SPOT[1], ty, k) - 30 * math.sin(math.pi * k)
             ball = ((x, y, (x, lerp(SPOT[1] + 12, GOAL.bottom, k))), lerp(15, 7, k), k * 900)
+            trail.append((x, y, lerp(15, 7, k)))
         elif state == "result":
             k = ease(el / 450)
             if res == "goal":
@@ -313,6 +322,10 @@ def play(screen, win: bool) -> bool:
         pygame.draw.ellipse(sh, (0, 0, 0, 80), sh.get_rect())
         screen.blit(sh, sh.get_rect(center=(kc[0], KEEPER_FEET_Y)))
         screen.blit(kimg, kimg.get_rect(center=kc))
+        if state == "fly" and show.rank:  # 등급 색 꼬리
+            for i, (x, y, r) in enumerate(trail[-12:]):
+                g = ui.glow(int(r * (1.4 + i * 0.12)), ui.TIERS[show.rank]["c"], 40 + i * 12)
+                screen.blit(g, g.get_rect(center=(x, y)))
         if ball and not (state == "result" and res == "goal"):
             draw_ball(screen, ball_img, *ball)
 
@@ -327,6 +340,7 @@ def play(screen, win: bool) -> bool:
             sc = 1.5 - 0.5 * ease(el / 200)
             b = pygame.transform.rotozoom(banners[res], 0, sc)
             screen.blit(b, b.get_rect(center=(400, 430)))
+        show.draw(screen, now)
         draw_hud(screen, state, now)
         shake = max(0.0, 1 - (now - shake_at) / 220) * 7
         if shake > 0.5:

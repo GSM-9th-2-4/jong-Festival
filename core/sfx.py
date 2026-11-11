@@ -104,6 +104,8 @@ RECIPES = {
                          _noise(90, 0.5, decay=8)),
     "riser": lambda: _mix(_tone(180, 1100, 0.14, "saw", to=1500, decay=-1.2), _noise(1100, 0.1, decay=-1.5, smooth=0.5)),
     "heart": lambda: _seq(_tone(70, 110, 0.7, "sine", to=45, decay=3), _gap(60), _tone(60, 140, 0.55, "sine", to=40, decay=3)),
+    "firework": lambda: _mix(_noise(420, 0.45, decay=5, smooth=0.75), _tone(150, 220, 0.4, "sine", to=55, decay=5),
+                             _noise(420, 0.12, decay=2, smooth=0.1)),
     "zap": lambda: _mix(_noise(260, 0.45, decay=6, smooth=0.1), _tone(1900, 260, 0.25, "square", to=160, decay=4)),
 }
 for _lv, _root in enumerate((C5, E5, G5, C6), 1):  # 등급 상승 징글: 등급이 높을수록 높은 음
@@ -114,7 +116,7 @@ for _lv, _root in enumerate((C5, E5, G5, C6), 1):  # 등급 상승 징글: 등�
 
 def play(name, volume=1.0):
     """등록된 효과음 재생. 이름: move click tick go pop swing hit kick whistle net cheer groan coin drum win jackpot lose error
-    boom riser heart zap tier1~tier4"""
+    boom riser heart zap firework tier1~tier4"""
     if not _ready():
         return None
     if name not in _cache:

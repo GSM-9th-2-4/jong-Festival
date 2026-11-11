@@ -5,6 +5,8 @@ import random
 
 import pygame
 
+from core import sfx
+
 W, H = 800, 600
 FONT_NAMES = "applesdgothicneo,malgungothic,notosanscjkkr,nanumgothic,applegothic"
 
@@ -12,6 +14,16 @@ FONT_NAMES = "applesdgothicneo,malgungothic,notosanscjkkr,nanumgothic,applegothi
 WHITE, INK, GRAY = (255, 255, 255), (16, 14, 30), (165, 170, 195)
 GOLD, PINK, MINT, SKY, RED = (255, 205, 60), (255, 95, 140), (80, 225, 180), (90, 190, 255), (240, 80, 80)
 PARTY = [GOLD, PINK, MINT, SKY, WHITE]
+
+# 당첨 등급 (0 = 꽝). 등급 번호는 core.store.rank(경품이름) 으로 구함
+TIERS = [
+    {"name": "", "kor": "", "c": (120, 132, 180)},
+    {"name": "RARE!", "kor": "레어", "c": (80, 180, 255)},
+    {"name": "EPIC!!", "kor": "에픽", "c": (198, 112, 255)},
+    {"name": "LEGENDARY!!!", "kor": "전설", "c": (255, 198, 50)},
+    {"name": "CRITICAL!!!!", "kor": "크리티컬", "c": (255, 72, 96)},
+]
+TOP_TIER = len(TIERS) - 1
 
 _fonts, _texts, _grads = {}, {}, {}
 
@@ -231,3 +243,120 @@ def fade(screen, clock, out=True, ms=220):
         screen.blit(veil, (0, 0))
         pygame.display.flip()
         clock.tick(60)
+
+
+# ---------- 등급 축하 연출 (세 게임 공용) ----------
+
+def tier_banner(surf, rank, prize, el, center=(400, 270), hold=1300):
+    """'EPIC!!' 이 쾅 찍히는 배너. el = 터진 뒤 지난 ms."""
+    if not rank or not 0 <= el < hold:
+        return
+    t = TIERS[min(rank, TOP_TIER)]
+    slam = 1 + 2.4 * (1 - ease_out(el / 190))
+    fade_a = int(255 * clamp((hold - el) / 250))
+    size = 96 if len(t["name"]) < 10 else 78
+    img = pygame.transform.rotozoom(render(t["name"], size, t["c"] if rank < TOP_TIER else WHITE, outline=7), 5, slam)
+    img.set_alpha(fade_a)
+    surf.blit(img, img.get_rect(center=center))
+    text(surf, f"{t['kor']} 등급!   {prize}", 32, (center[0], center[1] + 86), WHITE, outline=4, alpha=fade_a,
+         scale=max(0.01, out_back((el - 120) / 250)))
+
+
+class Fireworks:
+    """폭죽. launch() 로 쏘고 매 프레임 update_draw(surf) — 이번 프레임에 터진 개수를 돌려줌."""
+
+    def __init__(self):
+        self.rockets, self.sparks, self.blasts = [], [], []
+
+    def launch(self, n=1, colors=PARTY, area=(70, W - 70, 50, 250)):
+        for _ in range(n):
+            x, y = random.uniform(area[0], area[1]), random.uniform(area[2], area[3])
+            self.rockets.append([x + random.uniform(-60, 60), H + 10, x, y, 0, random.randint(22, 34), random.choice(colors)])
+
+    def update_draw(self, surf):
+        popped = 0
+        for r in self.rockets:
+            r[4] += 1
+            k = ease_out(r[4] / r[5])
+            x, y = lerp(r[0], r[2], k), lerp(r[1], r[3], k)
+            k0 = ease_out(max(0, r[4] - 3) / r[5])
+            pygame.draw.line(surf, (255, 236, 190), (lerp(r[0], r[2], k0), lerp(r[1], r[3], k0)), (x, y), 3)
+            if r[4] >= r[5]:
+                popped += 1
+                self.blasts.append([x, y, 0, r[6]])
+                n = random.randint(38, 56)
+                speed = random.uniform(4.5, 7.5)
+                for i in range(n):
+                    a = 2 * math.pi * i / n + random.uniform(-0.05, 0.05)
+                    v = speed * random.uniform(0.82, 1.0) * (0.55 if i % 3 == 0 else 1)
+                    life = random.randint(38, 60)
+                    self.sparks.append([x, y, math.cos(a) * v, math.sin(a) * v, r[6] if i % 4 else WHITE, life, life])
+        self.rockets = [r for r in self.rockets if r[4] < r[5]]
+        for b in self.blasts:  # 터지는 순간 번쩍
+            b[2] += 1
+            g = glow(70, b[3], int(230 * (1 - b[2] / 8)))
+            surf.blit(g, g.get_rect(center=(b[0], b[1])))
+        self.blasts = [b for b in self.blasts if b[2] < 8]
+        for p in self.sparks:
+            ox, oy = p[0], p[1]
+            p[0] += p[2]
+            p[1] += p[3]
+            p[2] *= 0.955
+            p[3] = p[3] * 0.955 + 0.07
+            p[5] -= 1
+            f = p[5] / p[6]
+            if f > 0.25 or p[5] % 2:  # 꺼지기 직전 반짝반짝
+                pygame.draw.line(surf, [int(v * min(1.0, f * 1.6)) for v in p[4]], (ox, oy), (p[0], p[1]), 3 if f > 0.5 else 2)
+        self.sparks = [p for p in self.sparks if p[5] > 0]
+        return popped
+
+
+class TierShow:
+    """당첨 순간 축하 연출: 번쩍 + 등급 배너 + 폭죽. 등급이 높을수록 폭죽이 많고 오래 터짐.
+    결과가 나오는 순간 start(now), 매 프레임 맨 위에 draw(surf, now). 꽝(rank 0)이면 아무것도 안 함."""
+    RATE = (0, 0.035, 0.08, 0.16, 0.34)  # 프레임당 폭죽 발사 확률
+
+    def __init__(self, rank, prize, banner=True, center=(400, 270)):
+        self.rank = max(0, min(TOP_TIER, rank))
+        self.prize, self.banner, self.center = prize, banner, center
+        self.duration = 0 if not self.rank else 2400 + 800 * self.rank  # 게임이 이만큼 더 기다려주면 됨
+        self.t0 = None
+        self.fw = Fireworks()
+        self.last_pop = 0
+        c = TIERS[self.rank]["c"]
+        self.colors = PARTY + [(255, 120, 60), (170, 255, 120)] if self.rank == TOP_TIER else \
+            [c, tuple(min(255, v + 70) for v in c), WHITE, GOLD]
+
+    @property
+    def started(self):
+        return self.t0 is not None
+
+    def start(self, now):
+        if not self.rank or self.started:
+            return
+        self.t0 = now
+        sfx.play("boom")
+        sfx.play(f"tier{self.rank}")
+        if self.rank >= 3:
+            sfx.play("cheer", 0.8)
+        self.fw.launch(1 + 2 * self.rank, self.colors)
+
+    def draw(self, surf, now):
+        if not self.started:
+            return
+        el = now - self.t0
+        veil = pygame.Surface(surf.get_size())  # 폭죽이 잘 보이게 살짝 어둡게
+        veil.set_alpha(int((30 + 22 * self.rank) * clamp(el / 300) * clamp((self.duration - el) / 500)))
+        surf.blit(veil, (0, 0))
+        if el < self.duration - 900 and random.random() < self.RATE[self.rank]:
+            self.fw.launch(1 if self.rank < TOP_TIER else random.randint(1, 3), self.colors)
+        if self.fw.update_draw(surf) and now - self.last_pop > 110:
+            self.last_pop = now
+            sfx.play("firework", 0.55)
+        if self.banner:
+            tier_banner(surf, self.rank, self.prize, el, self.center)
+        if el < 300:
+            white = pygame.Surface(surf.get_size())
+            white.fill(WHITE)
+            white.set_alpha(int(210 * (1 - el / 300) ** 2))
+            surf.blit(white, (0, 0))

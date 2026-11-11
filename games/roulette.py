@@ -11,6 +11,7 @@ import pygame
 
 from core import sfx, ui
 from core.store import LOSE, PRIZES  # 읽기 전용 (칸 이름/넓이 표시용)
+from core.store import rank as prize_rank
 
 NAME = "레전드 룰렛"
 TAGLINE = "돌려라! 등급이 터진다!"
@@ -20,25 +21,18 @@ W, H = ui.W, ui.H
 CX, CY, R = 300, 322, 188
 SPIN_MS, SLOW_MS, BOOST_MS = 1700, 1150, 1250
 FINAL_MIN_S = 3.4       # 마지막 감속 최소 시간
-LAND_MS = 2800
+LAND_MS = 1200          # 멈춘 뒤 기본 대기 (+ 등급별 폭죽 시간)
 
-TIERS = [  # 등급 0 = 꽝(기본 화면)
-    {"name": "", "kor": "", "c": (120, 132, 180), "bg": ((8, 10, 34), (36, 22, 78))},
-    {"name": "RARE!", "kor": "레어", "c": (80, 180, 255), "bg": ((4, 26, 92), (22, 104, 214))},
-    {"name": "EPIC!!", "kor": "에픽", "c": (198, 112, 255), "bg": ((46, 6, 98), (152, 50, 214))},
-    {"name": "LEGENDARY!!!", "kor": "전설", "c": (255, 198, 50), "bg": ((104, 36, 0), (238, 150, 22))},
-    {"name": "CRITICAL!!!!", "kor": "크리티컬", "c": (255, 72, 96), "bg": ((116, 0, 22), (255, 92, 56))},
-]
+BGS = [((8, 10, 34), (36, 22, 78)), ((4, 26, 92), (22, 104, 214)), ((46, 6, 98), (152, 50, 214)),
+       ((104, 36, 0), (238, 150, 22)), ((116, 0, 22), (255, 92, 56))]
+TIERS = [dict(t, bg=bg) for t, bg in zip(ui.TIERS, BGS)]  # 등급 0 = 꽝(기본 화면)
 SLICE = [((46, 50, 82), (36, 40, 68)), ((36, 118, 232),) * 2, ((150, 68, 232),) * 2, ((246, 160, 28),) * 2, ((255, 56, 92),) * 2]
 TOP = len(TIERS) - 1
 
 
 def ranks():
-    """경품 이름 → 등급. 꽝 0, 나머지는 확률 높은 순서대로 1, 2, 3…"""
-    wins = sorted((p for p in PRIZES if p.name != LOSE), key=lambda p: -p.pct)
-    out = {LOSE: 0}
-    out.update((p.name, min(TOP, i)) for i, p in enumerate(wins, 1))
-    return out
+    """경품 이름 → 등급 (꽝 0)."""
+    return {p.name: min(TOP, prize_rank(p.name)) for p in PRIZES}
 
 
 def build_slices():
@@ -292,12 +286,12 @@ def play(screen, win: bool, prize: str = None) -> bool:
     art = Art()
     rk = ranks()
     if prize in rk:
-        rank = rk[prize]
+        tier = rk[prize]
     else:  # 경품 이름을 안 받았을 때(단독 실행): win 만 보고 등급을 확률대로 고름
         wins = [p for p in PRIZES if p.name != LOSE]
-        rank = rk[random.choices(wins, [p.pct for p in wins])[0].name] if win else 0
-    mine = [s for s in art.slices if s[1] == rank]
-    near_miss = rank == 0 and random.random() < 0.45
+        tier = rk[random.choices(wins, [p.pct for p in wins])[0].name] if win else 0
+    mine = [s for s in art.slices if s[1] == tier]
+    near_miss = tier == 0 and random.random() < 0.45
     if near_miss:  # 최고 등급 칸을 아슬아슬하게 지나쳐서 꽝
         top_i = max(range(len(art.slices)), key=lambda i: art.slices[i][1])
         target = art.slices[(top_i + 1) % len(art.slices)]
@@ -307,12 +301,13 @@ def play(screen, win: bool, prize: str = None) -> bool:
         landing = target[2] + target[3] * random.uniform(0.28, 0.72)
 
     script = [("spin", SPIN_MS, 560)]
-    for lv in range(1, rank + 1):
+    for lv in range(1, tier + 1):
         script += [("slow", SLOW_MS, 44), ("boom", lv), ("spin", BOOST_MS, 560 + 170 * lv)]
     script.append(("final",))
 
     canvas = pygame.Surface((W, H))
     fx = ui.Particles()
+    show = ui.TierShow(tier, target[0], banner=False)  # 멈춘 뒤 폭죽
     state, t_state = "ready", pygame.time.get_ticks()
     theta, omega = random.uniform(0, 360), 24.0
     level = prev_level = 0
@@ -385,15 +380,15 @@ def play(screen, win: bool, prize: str = None) -> bool:
             if t >= 1:
                 state, t_state = "land", now
                 omega = 0
-                if rank:
-                    shake_at = flash_at = now
-                    c = TIERS[rank]["c"]
-                    fx.burst((CX, CY - 40), 120 + 40 * rank, [c, ui.GOLD, ui.WHITE], speed=15, life=90, size=(5, 12))
+                if tier:
+                    shake_at = now
+                    c = TIERS[tier]["c"]
+                    fx.burst((CX, CY - 40), 120 + 40 * tier, [c, ui.GOLD, ui.WHITE], speed=15, life=90, size=(5, 12))
                     sfx.play("coin")
-                    sfx.play("cheer", 0.8)
+                    show.start(now)
                 else:
                     sfx.play("groan")
-        elif state == "land" and el >= (LAND_MS if rank else 2300):
+        elif state == "land" and el >= (LAND_MS + show.duration if tier else 2300):
             return True
 
         idx = bisect_right(art.starts, theta % 360) - 1  # 포인터가 가리키는 칸
@@ -419,7 +414,7 @@ def play(screen, win: bool, prize: str = None) -> bool:
         draw_background(canvas, art, now, level, prev_level, since, omega)
         if level == TOP and state != "land":
             draw_bolts(canvas, bolts, TIERS[TOP]["c"])
-        bulbs_all = since < 500 and (since // 70) % 2 == 0 or (state == "land" and rank and (el // 160) % 2 == 0)
+        bulbs_all = since < 500 and (since // 70) % 2 == 0 or (state == "land" and tier and (el // 160) % 2 == 0)
         draw_wheel(canvas, art, now, theta, omega, level, flap, bulbs_all)
         if state == "land":
             draw_highlight(canvas, target, theta, now)
@@ -441,22 +436,14 @@ def play(screen, win: bool, prize: str = None) -> bool:
         elif slowing:
             ui.text(canvas, "멈추나…?!", 44, (CX, 558), ui.WHITE, outline=5, scale=1 + 0.06 * math.sin(now / 50))
 
-        if level and since < 1300 and state != "land":  # 등급 터짐 배너
-            t = TIERS[level]
-            slam = 1 + 2.4 * (1 - ui.ease_out(since / 190))
-            fade = int(255 * ui.clamp((1300 - since) / 250))
-            size = 96 if len(t["name"]) < 10 else 78
-            img = pygame.transform.rotozoom(ui.render(t["name"], size, t["c"] if level < TOP else ui.WHITE, outline=7), 5, slam)
-            img.set_alpha(fade)
-            canvas.blit(img, img.get_rect(center=(400, 270)))
-            got = next(p for r, p in art.ladder if r == level)
-            ui.text(canvas, f"{t['kor']} 등급!   {got} 확보", 32, (400, 356), ui.WHITE, outline=4, alpha=fade,
-                    scale=ui.out_back((since - 120) / 250) or 0.01)
+        if state != "land":  # 등급 터짐 배너
+            ui.tier_banner(canvas, level, next((p for r, p in art.ladder if r == level), "") + " 확보", since)
+        show.draw(canvas, now)
         if state == "land":  # 결과는 아래쪽 띠에 (멈춘 칸이 가려지지 않게)
             k = max(0.01, ui.out_back(el / 350))
-            t = TIERS[rank]
+            t = TIERS[tier]
             ui.panel(canvas, (20, 500, 760, 92), (6, 6, 20, 225), radius=22, border=(*t["c"], 255), width=4)
-            if rank:
+            if tier:
                 ui.text(canvas, target[0], 50, (400, 532), ui.WHITE, outline=5, scale=k)
                 ui.text(canvas, f"{t['kor']} 등급 당첨!", 24, (400, 572), t["c"], outline=3)
             else:

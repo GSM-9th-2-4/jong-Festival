@@ -1,5 +1,6 @@
 """두더지 잡기: 15초 동안 망치로 두더지 잡기(점수는 재미용) → 마지막 한 방: 빛나는 구멍 3개 중 하나 고르기.
-당첨이면 황금 두더지, 꽝이면 꽝 두더지. 어느 구멍을 골라도 결과는 런처가 뽑은 win 그대로.
+당첨이면 등급 두더지(레어 → 에픽 → 전설의 황금 → 크리티컬), 꽝이면 꽝 두더지. 등급이 높을수록 폭죽이 많이 터짐.
+어느 구멍을 골라도 결과는 런처가 뽑은 그대로.
 조작: 마우스/터치. 키보드는 숫자 1~9 (숫자패드 배치: 789 윗줄, 456 가운데, 123 아랫줄)."""
 import math
 import random
@@ -7,6 +8,7 @@ import random
 import pygame
 
 from core import sfx, ui
+from core.store import rank as prize_rank  # 읽기 전용
 
 NAME = "두더지 잡기"
 TAGLINE = "잡고 또 잡고, 마지막 한 방!"
@@ -15,7 +17,7 @@ COLOR = (90, 170, 80)
 PLAY_MS = 15_000
 INTRO_MS = 2400
 SUSPENSE_MS = 900
-REVEAL_MS = 2600
+REVEAL_MS = 1600  # 공개 후 기본 대기 (+ 등급별 폭죽 시간)
 
 W, H = ui.W, ui.H
 ROWS = ((305, 0.82), (410, 0.96), (520, 1.10))  # (구멍 y, 크기) 뒤→앞
@@ -26,9 +28,15 @@ for d in range(1, 10):
     idx = (2 - (d - 1) // 3) * 3 + (d - 1) % 3
     KEYS[pygame.K_0 + d] = KEYS[pygame.K_KP1 + d - 1] = idx
 
+KIND = ("dud", "rare", "epic", "gold", "crit")  # 등급 → 마지막에 나오는 두더지
+TITLE = ("꽝 두더지…", "레어 두더지!", "에픽 두더지!!", "전설의 황금 두더지!!!", "크리티컬 두더지!!!!")
+
 BODY = {"normal": ((146, 96, 62), (98, 60, 38), (214, 172, 128)),
         "hit": ((146, 96, 62), (98, 60, 38), (214, 172, 128)),
+        "rare": ((84, 168, 250), (34, 96, 180), (190, 226, 255)),
+        "epic": ((182, 112, 250), (104, 50, 176), (228, 200, 255)),
         "gold": ((250, 200, 50), (190, 130, 20), (255, 236, 150)),
+        "crit": ((255, 92, 120), (176, 30, 60), (255, 206, 214)),
         "dud": ((132, 134, 158), (84, 86, 110), (190, 192, 210))}
 
 
@@ -84,7 +92,7 @@ def make_mole(kind):
     for sx, d in ((40, -1), (80, 1)):    # 수염
         for dy in (-4, 3):
             ln(line, (sx, 86), (sx + 20 * d, 86 + dy), 1)
-    if kind == "gold":              # 왕관
+    if kind in ("gold", "crit"):    # 왕관
         pts = [(34, 34), (30, 6), (46, 22), (60, 0), (74, 22), (90, 6), (86, 34)]
         pygame.draw.polygon(s, (255, 215, 0), [(x * S, y * S) for x, y in pts])
         pygame.draw.polygon(s, (180, 120, 0), [(x * S, y * S) for x, y in pts], 2 * S)
@@ -254,20 +262,23 @@ def draw_hud(dst, art, score, combo, left):
 
 # ---------- 게임 ----------
 
-def play(screen, win: bool) -> bool:
+def play(screen, win: bool, prize: str = None) -> bool:
     clock = pygame.time.Clock()
     art = Art()
     canvas = pygame.Surface((W, H))
     fx = ui.Particles()
+    tier = (min(ui.TOP_TIER, prize_rank(prize)) if prize else 3) if win else 0  # 경품 이름을 못 받으면 황금 두더지
+    show = ui.TierShow(tier, prize or "당첨!", banner=False)
     pygame.mouse.set_visible(False)
     try:
-        return _run(screen, win, clock, art, canvas, fx)
+        return _run(screen, win, clock, art, canvas, fx, show)
     finally:
         pygame.mouse.set_visible(True)
         sfx.stop("drum")
 
 
-def _run(screen, win, clock, art, canvas, fx):
+def _run(screen, win, clock, art, canvas, fx, show):
+    tier = show.rank
     t0 = pygame.time.get_ticks()
     phase, t_phase = "intro", t0
     score = combo = 0
@@ -361,12 +372,12 @@ def _run(screen, win, clock, art, canvas, fx):
             cx, cy, sc = HOLES[picked]
             if win:
                 sfx.play("coin")
-                sfx.play("cheer", 0.7)
+                show.start(now)
                 fx.burst((cx, cy - 80 * sc), 70, [ui.GOLD, (255, 236, 150), ui.WHITE], speed=12, life=80, size=(6, 12), shape="circle")
                 fx.burst((cx, cy - 80 * sc), 24, [ui.GOLD, ui.WHITE], speed=10, life=60, size=(8, 14), shape="star")
             else:
                 sfx.play("groan")
-        elif phase == "reveal" and el >= REVEAL_MS:
+        elif phase == "reveal" and el >= REVEAL_MS + show.duration:
             return True
 
         for m in moles:  # 두더지 높이/찌그러짐
@@ -386,7 +397,7 @@ def _run(screen, win, clock, art, canvas, fx):
         if phase == "suspense":
             special = None
         elif phase == "reveal":
-            special = (picked, "gold" if win else "dud", ui.out_back(el / 380), 0)
+            special = (picked, KIND[tier], ui.out_back(el / 380), 0)
         draw_scene(canvas, art, now, moles, special)
 
         if phase in ("pick", "suspense", "reveal"):
@@ -395,7 +406,7 @@ def _run(screen, win, clock, art, canvas, fx):
             canvas.blit(veil, (0, 0))
             if phase == "reveal" and win:
                 cx, cy, sc = HOLES[picked]
-                ui.rays(canvas, (cx, cy - 70 * sc), 330, ui.GOLD, now / 900, alpha=50)
+                ui.rays(canvas, (cx, cy - 70 * sc), 330, ui.TIERS[tier]["c"], now / 900, alpha=50)
             for i in PICK:  # 후보 구멍만 다시 밝게
                 cx, cy, sc = HOLES[i]
                 chosen = i == picked
@@ -424,6 +435,7 @@ def _run(screen, win, clock, art, canvas, fx):
         swing = ui.clamp(sw / 60) if sw < 60 else 1 - ui.clamp((sw - 60) / 160)
         draw_hammer(canvas, art, cursor, swing)
 
+        show.draw(canvas, now)
         shake = max(0.0, 1 - (now - shake_at) / 140) * 5
         screen.blit(canvas, (random.uniform(-shake, shake), random.uniform(-shake, shake)))
 
@@ -442,8 +454,9 @@ def _run(screen, win, clock, art, canvas, fx):
             ui.text(screen, "두구두구두구…", 60, (400, 100), ui.WHITE, outline=5, scale=1 + 0.05 * math.sin(now / 40))
         elif phase == "reveal":
             if win:
-                ui.text(screen, "황금 두더지!!", 76, (400, 96), ui.GOLD, outline=6, scale=ui.out_back(el / 300))
-                ui.text(screen, "당첨이에요!", 34, (400, 168), ui.WHITE, outline=3)
+                t = ui.TIERS[tier]
+                ui.text(screen, TITLE[tier], 66 if tier < 3 else 56, (400, 92), t["c"], outline=6, scale=ui.out_back(el / 300))
+                ui.text(screen, f"{t['kor']} 등급!   {show.prize}", 32, (400, 164), ui.WHITE, outline=3)
             else:
                 ui.text(screen, "꽝 두더지…", 76, (400, 96), (200, 206, 235), outline=6, scale=ui.out_back(el / 300))
                 ui.text(screen, "메롱~ 다음 기회에!", 30, (400, 168), ui.WHITE, outline=3)

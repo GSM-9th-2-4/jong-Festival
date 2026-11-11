@@ -32,6 +32,12 @@ assert sum(p.pct for p in PRIZES) == 100, "확률 합이 100이어야 함"
 _rng = secrets.SystemRandom()
 
 
+def rank(prize: str) -> int:
+    """등급: 꽝 0, 당첨은 확률 높은 순서로 1(레어) 2(에픽) 3(전설) 4(크리티컬)… 확률이 낮을수록 높은 등급."""
+    wins = sorted((p for p in PRIZES if p.name != LOSE), key=lambda p: -p.pct)
+    return next((i for i, p in enumerate(wins, 1) if p.name == prize), 0)
+
+
 def _now():
     return datetime.now().isoformat(timespec="seconds")
 
