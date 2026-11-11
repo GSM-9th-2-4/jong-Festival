@@ -1,11 +1,15 @@
-"""페널티킥: 스페이스 한 번 → 슛. 골/선방/빗나감은 런처가 넘겨준 win 대로 연출 (조준 없음).
+"""페널티킥: 스페이스(또는 클릭/터치) 한 번 → 슛. 골/선방/빗나감은 런처가 넘겨준 win 대로 연출 (조준 없음).
 그래픽은 전부 코드로 그림 (에셋 파일 없음)."""
 import math
 import random
 
 import pygame
 
+from core import sfx, ui
+
 NAME = "페널티킥"
+TAGLINE = "단 한 번의 슛!"
+COLOR = (40, 140, 60)
 FLY_MS = 550
 SAVE_RATIO = 0.7  # 꽝일 때 키퍼 선방 비율 (나머지는 빗나감)
 
@@ -19,7 +23,6 @@ DIVES = {  # 막는 범위, 회전 방향
     "center": (pygame.Rect(345, 175, 110, 145), 0),
     "right": (pygame.Rect(410, 205, 170, 115), -1),
 }
-KOR = "applegothic,malgungothic,nanumgothic"
 
 
 def pick_shot(win, rng=random):
@@ -72,7 +75,7 @@ def make_bg():
             k = rng.uniform(0.35, 0.8)
             pygame.draw.circle(bg, (int(c[0] * k), int(c[1] * k), int(c[2] * k)), (x + rng.randint(0, 3), y + 4), 3)
     bg.fill((14, 16, 26), (0, 186, W, 24))  # 광고판
-    ad = pygame.font.SysFont(KOR, 15, bold=True)
+    ad = ui.font(15)
     x = 0
     for i in range(20):
         s = ad.render(("FESTIVAL CUP", "할인 쿠폰 GET", "승부차기")[i % 3], True,
@@ -200,27 +203,20 @@ def draw_ball(screen, img, pos, r, angle):
     screen.blit(b, b.get_rect(center=pos[:2]))
 
 
-def draw_hud(screen, fonts, state):
-    panel = pygame.Surface((260, 60), pygame.SRCALPHA)
-    pygame.draw.rect(panel, (10, 14, 28, 215), panel.get_rect(), border_radius=10)
-    pygame.draw.rect(panel, (255, 140, 20), (0, 0, 6, 60), border_top_left_radius=10, border_bottom_left_radius=10)
-    panel.blit(fonts["small"].render("FESTIVAL CUP · 승부차기", True, (160, 170, 190)), (18, 7))
-    panel.blit(fonts["mid"].render("단 한 번의 슛!", True, (255, 255, 255)), (18, 26))
-    screen.blit(panel, (16, 16))
+def draw_hud(screen, state, now):
+    ui.panel(screen, (16, 14, 250, 62), (10, 14, 28, 215), radius=12)
+    pygame.draw.rect(screen, (255, 140, 20), (16, 14, 6, 62), border_top_left_radius=12, border_bottom_left_radius=12)
+    ui.text(screen, "FESTIVAL CUP · 승부차기", 14, (34, 30), (160, 170, 190), anchor="midleft", bold=False, shadow=False)
+    ui.text(screen, "단 한 번의 슛!", 24, (34, 56), ui.WHITE, anchor="midleft")
     if state == "ready":
-        tip = "SPACE  ·  슛!"
-        t = fonts["mid"].render(tip, True, (255, 255, 255))
-        pill = pygame.Surface((t.get_width() + 40, 40), pygame.SRCALPHA)
-        pygame.draw.rect(pill, (0, 0, 0, 160), pill.get_rect(), border_radius=20)
-        pill.blit(t, t.get_rect(center=pill.get_rect().center))
-        screen.blit(pill, pill.get_rect(center=(400, 572)))
+        pulse = 0.5 + 0.5 * math.sin(now / 250)
+        ui.pill(screen, "SPACE 또는 터치  ·  슛!", (400, 568 + 3 * pulse), 24, bg=(0, 0, 0, int(150 + 60 * pulse)))
 
 
 # ---------- 게임 ----------
 
 def play(screen, win: bool) -> bool:
     clock = pygame.time.Clock()
-    fonts = {"small": pygame.font.SysFont(KOR, 14), "mid": pygame.font.SysFont(KOR, 22, bold=True)}
     big = pygame.font.SysFont("arialblack,impact", 100)
     bg, keeper_img, ball_img = make_bg(), make_keeper(), make_ball()
     layer = pygame.Surface((W, H), pygame.SRCALPHA)
@@ -232,14 +228,19 @@ def play(screen, win: bool) -> bool:
     dive, tx, ty, res = pick_shot(win)  # 결과는 시작 전에 정해짐
     sway0 = 0.0
     confetti = []
+    shake_at = -9999
+    sfx.play("whistle")
 
     while True:
         now = pygame.time.get_ticks()
         for e in pygame.event.get():
             if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE):
                 return False
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE and state == "ready":
+            shoot = (e.type == pygame.KEYDOWN and e.key in (pygame.K_SPACE, pygame.K_RETURN)) or \
+                (e.type == pygame.MOUSEBUTTONDOWN and e.button == 1)
+            if shoot and state == "ready" and now - t0 > 500:  # 0.5초: 메뉴에서 넘어온 연타 무시
                 state, t0, sway0 = "fly", now, 12 * math.sin(now / 250)
+                sfx.play("kick")
 
         # 상태 진행
         if state == "fly" and now - t0 > FLY_MS:
@@ -248,7 +249,16 @@ def play(screen, win: bool) -> bool:
                              random.choice([(255, 215, 0), (255, 80, 80), (90, 200, 255), (255, 255, 255)])]
                             for _ in range(120)]
             state, t0 = "result", now
-        elif state == "result" and now - t0 > 1600:
+            if res == "goal":
+                shake_at = now
+                sfx.play("net")
+                sfx.play("cheer")
+            else:
+                if res == "save":
+                    shake_at = now
+                    sfx.play("hit", 0.6)
+                sfx.play("groan")
+        elif state == "result" and now - t0 > 2000:
             return True
 
         # 공 위치 (x, y, 그림자위치), 반지름, 회전
@@ -317,6 +327,23 @@ def play(screen, win: bool) -> bool:
             sc = 1.5 - 0.5 * ease(el / 200)
             b = pygame.transform.rotozoom(banners[res], 0, sc)
             screen.blit(b, b.get_rect(center=(400, 430)))
-        draw_hud(screen, fonts, state)
+        draw_hud(screen, state, now)
+        shake = max(0.0, 1 - (now - shake_at) / 220) * 7
+        if shake > 0.5:
+            snap = screen.copy()
+            screen.blit(snap, (random.uniform(-shake, shake), random.uniform(-shake, shake)))
         pygame.display.flip()
         clock.tick(60)
+
+
+def thumbnail():
+    s = pygame.Surface((W, H))
+    s.blit(make_bg(), (0, 0))
+    layer = pygame.Surface((W, H), pygame.SRCALPHA)
+    draw_net(layer, (0, 0), 0)
+    s.blit(layer, (0, 0))
+    draw_posts(s)
+    k = pygame.transform.rotozoom(make_keeper(), 60, 1)
+    s.blit(k, k.get_rect(center=(330, 250)))
+    draw_ball(s, make_ball(), (510, 205, (510, 318)), 14, 30)
+    return s.subsurface((160, 110, 480, 300)).copy()
