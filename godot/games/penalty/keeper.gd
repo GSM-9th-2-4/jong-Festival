@@ -1,5 +1,5 @@
 extends Node3D
-## 골키퍼: 캡슐/구로 만든 관절 인형. 자세(관절 각도 묶음)를 섞어서 움직임.
+## 골키퍼(모델 파일이 없을 때 쓰는 대신용): 캡슐/구로 만든 관절 인형. 자세(관절 각도 묶음)를 섞어서 움직임.
 ## +z(카메라 쪽)를 바라봄. 팔다리는 관절에서 -y 로 뻗음. L = +x 쪽, R = -x 쪽.
 
 const HIP_Y := 0.95
@@ -15,15 +15,16 @@ var _x0 := 0.0
 var _keys := []       # [준비, 도약, 뻗기, 착지]
 
 
-func build() -> void:
-	var jersey := Kit.pbr("cotton_jersey", Vector3(3, 3, 3), Color(0.95, 0.80, 0.10), true)
+## style: 색을 바꿔 다른 선수(키커)로도 씀 — {"jersey": Color, "sock": Color, "glove": Color}
+func build(style := {}) -> void:
+	var jersey := Kit.pbr("cotton_jersey", Vector3(3, 3, 3), style.get("jersey", Color(0.95, 0.80, 0.10)), true)
 	jersey.metallic = 0.0
 	jersey.metallic_texture = null
 	var shorts := Kit.plain(Color(0.035, 0.04, 0.055), 0.0, 0.7)
 	var skin := Kit.plain(Color(0.74, 0.53, 0.42), 0.0, 0.55)
-	var sock := Kit.plain(Color(0.90, 0.76, 0.10), 0.0, 0.8)
+	var sock := Kit.plain(style.get("sock", Color(0.90, 0.76, 0.10)), 0.0, 0.8)
 	var boot := Kit.plain(Color(0.03, 0.03, 0.03), 0.1, 0.35)
-	var glove := Kit.plain(Color(0.92, 0.93, 0.95), 0.0, 0.6)
+	var glove := Kit.plain(style.get("glove", Color(0.92, 0.93, 0.95)), 0.0, 0.6)
 	var hair := Kit.plain(Color(0.05, 0.035, 0.03), 0.0, 0.8)
 
 	pelvis = Node3D.new()
