@@ -1,0 +1,22 @@
+; 종 페스티벌 — Godot 4 (3D) 버전
+config_version=5
+
+[application]
+config/name="종 페스티벌"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/screen_space_aa=1
+environment/defaults/default_clear_color=Color(0.01, 0.01, 0.02, 1)
+
+[autoload]
+Kit="*res://core/kit.gd"
+Store="*res://core/store.gd"

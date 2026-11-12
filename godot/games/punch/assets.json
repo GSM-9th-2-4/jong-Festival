@@ -1,0 +1,5 @@
+{
+  "textures": ["dark_brick_wall", "metal_plate_02", "floor_tiles_06", "fabric_leather_02"],
+  "hdris": ["neon_photostudio"],
+  "models": ["hanging_industrial_lamp", "metal_trash_can", "bar_chair_round_01", "WetFloorSign_01"]
+}

@@ -1,0 +1,7 @@
+.godot/
+*.import
+# 내려받는 소재 (python3 godot/tools/fetch_assets.py 로 받음)
+assets/textures/
+assets/hdris/
+assets/models/
+shots/
