@@ -1,12 +1,12 @@
 extends RefCounted
 ## 런처 화면 부품 (글자, 유리 패널, 버튼). launcher.gd 에서만 사용.
 
-const INK := Color(0.03, 0.035, 0.06)
+const INK := Color(0.085, 0.08, 0.075)
 const LINE := Color(1, 1, 1, 0.14)
-const GRAY := Color(0.66, 0.7, 0.8)
-const WHITE := Color(0.97, 0.975, 1.0)
-const RED := Color(1.0, 0.33, 0.36)
-const MINT := Color(0.42, 0.95, 0.72)
+const GRAY := Color(0.68, 0.675, 0.66)
+const WHITE := Color(0.955, 0.94, 0.905)   # 따뜻한 흰색 (순백은 쓰지 않음)
+const RED := Color(0.93, 0.3, 0.28)
+const MINT := Color(0.45, 0.86, 0.66)
 
 const GLASS_SHADER := "
 shader_type canvas_item;
@@ -24,44 +24,30 @@ void fragment() {
 }
 "
 
-static var _fonts := {}
-static var _light: SystemFont
 static var _shader: Shader
 
 
-static func font(en: bool, spacing := 0, light := false) -> Font:
-	var key := "%s/%d/%s" % [en, spacing, light]
-	if not _fonts.has(key):
-		var base: Font = Kit.font_en() if en else Kit.font_kr()
-		if light and not en:
-			if _light == null:
-				_light = SystemFont.new()
-				_light.font_names = Kit.font_kr().font_names
-				_light.font_weight = 400
-			base = _light
-		var fv := FontVariation.new()
-		fv.base_font = base
-		fv.spacing_glyph = spacing
-		_fonts[key] = fv
-	return _fonts[key]
+## 글꼴은 Kit.font (Pretendard) 하나. num: 숫자 폭 고정(표/코드/점수), light: 본문 굵기(500), weight: 직접 지정.
+static func font(num: bool, spacing := 0, light := false, weight := 0) -> Font:
+	return Kit.font(weight if weight > 0 else (500 if light else 700), num, spacing)
 
 
-static func settings(size: int, color := WHITE, en := false, spacing := 0, light := false) -> LabelSettings:
+## 그림자·외곽선 없음 — 글자 뒤 어두운 막/판으로 읽히게 한다. 큰 글자는 자간을 조금 좁힘.
+static func settings(size: int, color := WHITE, num := false, spacing := 0, light := false, weight := 0) -> LabelSettings:
 	var ls := LabelSettings.new()
-	ls.font = font(en, spacing, light)
+	if spacing == 0 and size >= 40:
+		spacing = -int(round(size * 0.02))
+	ls.font = font(num, spacing, light, weight)
 	ls.font_size = size
 	ls.font_color = color
-	ls.shadow_size = 1
-	ls.shadow_color = Color(0, 0, 0, 0.55)
-	ls.shadow_offset = Vector2(0, 2)
 	return ls
 
 
 ## 글자. align: -1 왼쪽(x 가 왼쪽 끝) / 0 가운데(x 가 중심) / 1 오른쪽(x 가 오른쪽 끝). y 는 글자 상자의 위쪽.
-static func text(parent: Node, s: String, size: int, pos: Vector2, color := WHITE, en := false, spacing := 0, align := -1, light := false) -> Label:
+static func text(parent: Node, s: String, size: int, pos: Vector2, color := WHITE, num := false, spacing := 0, align := -1, light := false, weight := 0) -> Label:
 	var l := Label.new()
 	l.text = s
-	l.label_settings = settings(size, color, en, spacing, light)
+	l.label_settings = settings(size, color, num, spacing, light, weight)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var w := 1400.0
 	l.size = Vector2(w, 0)
@@ -159,10 +145,10 @@ static func button(parent: Node, r: Rect2, label: String, size: int, en := true,
 	b.position = r.position
 	b.size = r.size
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", font(en, 1 if en else 0))
+	b.add_theme_font_override("font", font(en))
 	b.add_theme_font_size_override("font_size", size)
 	b.add_theme_color_override("font_color", WHITE)
-	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_color_override("font_hover_color", WHITE)
 	b.add_theme_color_override("font_pressed_color", INK)
 	b.add_theme_stylebox_override("normal", flat(Color(1, 1, 1, 0.05), 8, accent, 1))
 	b.add_theme_stylebox_override("hover", flat(Color(1, 1, 1, 0.13), 8, Color(1, 1, 1, 0.4), 1))

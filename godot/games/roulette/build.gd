@@ -243,8 +243,13 @@ static func _text(parent: Node, text: String, size: int, color: Color, outline: 
 	parent.add_child(holder)
 	var l := Label.new()
 	l.text = text
-	var ls := Kit.label_settings(size, color, en, maxi(4, size / 9), false)
-	ls.outline_color = outline
+	var ls := LabelSettings.new()  # 판에 인쇄된 글자: 외곽선 없이 굵기로만, 아래로 살짝 떨어진 짙은 그림자 하나
+	ls.font = Kit.font(900 if en else 800, en, -int(round(size * 0.02)))
+	ls.font_size = size
+	ls.font_color = color
+	ls.shadow_size = 0
+	ls.shadow_color = Color(outline, 0.55)
+	ls.shadow_offset = Vector2(0, maxf(2.0, size * 0.04))
 	l.label_settings = ls
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -322,7 +327,7 @@ static func face_viewport(slices: Array, size: int) -> SubViewport:
 		var arc := deg_to_rad(w) * c * 0.76
 		if nm == Store.LOSE:
 			_text(root, "꽝", int(c * 0.2), Color(0.6, 0.63, 0.74), Color(0.02, 0.02, 0.03), false, _pt(c, mid, c * 0.68), mid)
-			_text(root, "NO LUCK", int(c * 0.05), Color(0.42, 0.45, 0.56), Color(0.02, 0.02, 0.03), true, _pt(c, mid, c * 0.47), mid)
+			_text(root, "다음 기회에", int(c * 0.034), Color(0.42, 0.45, 0.56), Color(0.02, 0.02, 0.03), true, _pt(c, mid, c * 0.47), mid)
 		elif digits == "":
 			var star_c := Color(1.0, 0.9, 0.5)
 			_star(root, _pt(c, mid, c * 0.775), arc * 0.47, deg_to_rad(mid), star_c)
@@ -330,7 +335,7 @@ static func face_viewport(slices: Array, size: int) -> SubViewport:
 			_star(root, _pt(c, mid, c * 0.535), arc * 0.25, deg_to_rad(mid), star_c)
 			_star(root, _pt(c, mid, c * 0.445), arc * 0.18, deg_to_rad(mid), star_c)
 		else:
-			var fs := int(minf(c * 0.2, arc * 0.86 / (digits.length() * 0.4)))
+			var fs := int(minf(c * 0.17, arc * 0.84 / (digits.length() * 0.66)))
 			var dark := paint(rk, false).darkened(0.72)
 			_text(root, digits, fs, Color(1.0, 0.98, 0.93), dark, true, _pt(c, mid, c * 0.745), mid)
 			_text(root, "원 할인" if w > 16.0 else "원", int(c * 0.052), Color(1.0, 0.97, 0.9, 0.92), dark, false, _pt(c, mid, c * 0.6), mid)

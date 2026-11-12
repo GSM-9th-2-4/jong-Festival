@@ -99,9 +99,11 @@ var _flash_rect: ColorRect
 var _title_sb: StyleBoxFlat
 var _title_lbl: Label
 var _prompt: Control
-var _tense: Label
+var _tense: Control
 var _banner: Control
 var _banner_big: Label
+var _banner_mark: ColorRect
+var _result_mark: ColorRect
 var _banner_sub: Label
 var _result: Control
 var _result_sb: StyleBoxFlat
@@ -513,10 +515,18 @@ func _glass(border: Color) -> StyleBoxFlat:
 	return sb
 
 
-func _label(text: String, size: int, color: Color, en := false, outline := 0, parent: Node = null) -> Label:
+const PAPER := Color(0.955, 0.94, 0.905)   # 따뜻한 흰색 (순백 대신)
+
+
+## 글자: Pretendard 한 가지, 굵기와 크기로만 위계를 만든다 (외곽선·그림자·번짐 없음). num: 숫자 폭 고정.
+func _label(text: String, size: int, color: Color, weight := 700, parent: Node = null, num := false) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.label_settings = Kit.label_settings(size, color, en, outline, outline > 0)
+	var ls := LabelSettings.new()
+	ls.font = Kit.font(weight, num, -int(round(size * 0.02)) if size >= 40 else 0)
+	ls.font_size = size
+	ls.font_color = color
+	l.label_settings = ls
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -559,36 +569,40 @@ func _build_hud() -> void:
 
 	_title_sb = _glass(Color(1, 1, 1, 0.25))
 	var tp := _panel(Rect2(28, 24, 248, 52), _title_sb, _hud)
-	_title_lbl = _label("LEGEND  ROULETTE", 30, Color(0.95, 0.93, 0.88), true, 0, tp)
-	_title_lbl.position = Vector2(0, 5)
-	_title_lbl.size = Vector2(248, 46)
+	_title_lbl = _label("레전드 룰렛", 24, PAPER, 800, tp)
+	_title_lbl.size = Vector2(248, 52)
 
 	# 등급 사다리
-	var head := _label("TIER", 20, Color(1, 1, 1, 0.55), true, 0, _hud)
+	var head := _label("등급", 15, Color(PAPER, 0.6), 600, _hud)
 	head.position = Vector2(1040, 150)
 	head.size = Vector2(212, 24)
 	for i in 4:
 		var r := 4 - i
 		var t: Dictionary = Kit.tier(r)
 		var c: Color = t["color"]
-		var sb := _glass(Color(c.r, c.g, c.b, 0.45))
+		var sb := _glass(Color(c.r, c.g, c.b, 0.4))
+		sb.set_border_width_all(1)
+		sb.border_width_left = 4
 		var p := _panel(Rect2(1040, 182 + i * 76, 212, 66), sb, _hud)
-		var nm := _label(t["name"], 27, c.darkened(0.25), true, 0, p)
+		var nm := _label(t["kor"], 21, Color(PAPER, 0.55), 700, p)
 		nm.position = Vector2(0, 7)
 		nm.size = Vector2(212, 30)
-		var pz := _label(Store.prize_of_rank(r), 16, Color(0.6, 0.62, 0.7), false, 0, p)
+		var pz := _label(Store.prize_of_rank(r), 15, Color(PAPER, 0.45), 500, p)
 		pz.position = Vector2(0, 36)
 		pz.size = Vector2(212, 24)
 		_rows[r] = {"panel": p, "sb": sb, "name": nm, "prize": pz}
 
 	# 안내
 	_prompt = _panel(Rect2(340, 632, 440, 56), _glass(Color(1, 1, 1, 0.35)), _hud)
-	var pl := _label("SPACE 또는 터치  ·  룰렛 돌리기", 24, Color.WHITE, false, 0, _prompt)
+	var pl := _label("스페이스 또는 터치로 룰렛 돌리기", 22, PAPER, 700, _prompt)
 	pl.size = Vector2(440, 56)
-	_tense = _label("멈추나…?!", 54, Color.WHITE, false, 10, _hud)
-	_tense.position = Vector2(260, 610)
-	_tense.size = Vector2(600, 80)
-	_tense.pivot_offset = Vector2(300, 40)
+	var tsb := _glass(Color(1, 1, 1, 0.0))  # 글자 뒤 어두운 판 (외곽선 대신)
+	tsb.bg_color = Color(0.03, 0.03, 0.04, 0.84)
+	tsb.set_border_width_all(0)
+	tsb.set_corner_radius_all(40)
+	_tense = _panel(Rect2(390, 610, 340, 80), tsb, _hud)
+	var tl := _label("멈추나…?!", 46, PAPER, 800, _tense)
+	tl.size = Vector2(340, 80)
 	_tense.visible = false
 
 	# 등급 배너
@@ -599,22 +613,39 @@ func _build_hud() -> void:
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner.modulate.a = 0.0
 	_hud.add_child(_banner)
-	_banner_big = _label("", 150, Color.WHITE, true, 16, _banner)
-	_banner_big.size = Vector2(1000, 160)
-	_banner_sub = _label("", 36, Color.WHITE, false, 8, _banner)
-	_banner_sub.position = Vector2(0, 150)
-	_banner_sub.size = Vector2(1000, 50)
+	var bsb := _glass(Color(1, 1, 1, 0.0))  # 어두운 판 + 등급 색 선 하나 + 굵은 글자
+	bsb.bg_color = Color(0.03, 0.03, 0.04, 0.88)
+	bsb.set_border_width_all(0)
+	bsb.set_corner_radius_all(16)
+	var plate := _panel(Rect2(200, 22, 600, 176), bsb, _banner)
+	_banner_mark = ColorRect.new()
+	_banner_mark.position = Vector2(270, 26)
+	_banner_mark.size = Vector2(60, 5)
+	_banner_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(_banner_mark)
+	_banner_big = _label("", 74, PAPER, 900, plate)
+	_banner_big.position = Vector2(0, 36)
+	_banner_big.size = Vector2(600, 90)
+	_banner_sub = _label("", 26, Color(PAPER, 0.8), 600, plate)
+	_banner_sub.position = Vector2(0, 124)
+	_banner_sub.size = Vector2(600, 36)
 
 	# 결과
 	_result_sb = _glass(Color(1, 1, 1, 0.5))
 	_result_sb.bg_color = Color(0.02, 0.022, 0.04, 0.86)
-	_result_sb.set_border_width_all(3)
-	_result_sb.set_corner_radius_all(20)
+	_result_sb.bg_color = Color(0.03, 0.03, 0.04, 0.9)
+	_result_sb.set_border_width_all(0)
+	_result_sb.set_corner_radius_all(16)
 	_result = _panel(Rect2(190, 560, 740, 128), _result_sb, _hud)
-	_result_big = _label("", 60, Color.WHITE, false, 8, _result)
-	_result_big.position = Vector2(0, 8)
-	_result_big.size = Vector2(740, 76)
-	_result_sub = _label("", 24, Color.WHITE, false, 0, _result)
+	_result_mark = ColorRect.new()   # 등급 색은 이 짧은 선 하나에만
+	_result_mark.position = Vector2(340, 0)
+	_result_mark.size = Vector2(60, 4)
+	_result_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_result.add_child(_result_mark)
+	_result_big = _label("", 56, PAPER, 900, _result)
+	_result_big.position = Vector2(0, 10)
+	_result_big.size = Vector2(740, 74)
+	_result_sub = _label("", 22, Color(PAPER, 0.75), 600, _result)
 	_result_sub.position = Vector2(0, 84)
 	_result_sub.size = Vector2(740, 32)
 	_result.visible = false
@@ -630,24 +661,24 @@ func _light_row(r: int) -> void:
 	var row: Dictionary = _rows[r]
 	var c: Color = Kit.tier(r)["color"]
 	var sb: StyleBoxFlat = row["sb"]
-	sb.bg_color = Color(c.r * 0.8, c.g * 0.8, c.b * 0.8, 0.95)
-	sb.border_color = Color(1, 1, 1, 0.9)
-	sb.shadow_color = Color(c.r, c.g, c.b, 0.55)
-	sb.shadow_size = 22
-	(row["name"] as Label).label_settings.font_color = Color(0.03, 0.03, 0.06)
-	(row["prize"] as Label).label_settings.font_color = Color(0.05, 0.05, 0.1)
+	sb.bg_color = Color(0.05, 0.05, 0.06, 0.94)  # 달성한 등급: 짙은 판 + 밝은 글자, 등급 색은 테두리에만 (빛 번짐 없음)
+	sb.border_color = c
+	sb.border_width_left = 7
+	(row["name"] as Label).label_settings.font_color = PAPER
+	(row["name"] as Label).label_settings.font = Kit.font(800)
+	(row["prize"] as Label).label_settings.font_color = Color(PAPER, 0.85)
 	var p: Panel = row["panel"]
-	p.scale = Vector2(1.18, 1.18)
+	p.scale = Vector2(1.12, 1.12)
 	create_tween().tween_property(p, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _show_banner(lv: int) -> void:
 	var t: Dictionary = Kit.tier(lv)
 	var c: Color = t["color"]
-	_banner_big.text = t["name"] + "!".repeat(lv)
-	_banner_big.label_settings.font_color = c.lerp(Color.WHITE, 0.35)
-	_banner_sub.text = "%s 등급   ·   %s 확보" % [t["kor"], Store.prize_of_rank(lv)]
-	_banner.scale = Vector2(2.4, 2.4)
+	_banner_big.text = "%s 등급" % t["kor"]
+	_banner_mark.color = c
+	_banner_sub.text = "%s 확보" % Store.prize_of_rank(lv)
+	_banner.scale = Vector2(1.35, 1.35)
 	_banner.modulate.a = 0.0
 	var tw := create_tween()
 	tw.tween_property(_banner, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -778,7 +809,6 @@ func _boom(lv: int) -> void:
 	_show_banner(lv)
 	var c: Color = Kit.tier(lv)["color"]
 	_title_sb.border_color = c
-	_title_lbl.label_settings.font_color = c.lerp(Color.WHITE, 0.4)
 	_burst(HUB + Vector3(0, 0, 0.15), c, 70 + 30 * lv, 3.0 + 0.6 * lv, 0.9)
 
 
@@ -804,10 +834,9 @@ func _land() -> void:
 	_result.scale = Vector2(0.6, 0.6)
 	create_tween().tween_property(_result, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if rank > 0:
-		_result_sb.border_color = c
+		_result_mark.color = c
 		_result_big.text = prize
-		_result_sub.text = "%s 등급 당첨!" % Kit.tier(rank)["kor"]
-		_result_sub.label_settings.font_color = c.lerp(Color.WHITE, 0.3)
+		_result_sub.text = "%s 등급 당첨" % Kit.tier(rank)["kor"]
 		_shake = 0.6
 		_flash = 0.5
 		Kit.sfx("coin")
@@ -821,10 +850,10 @@ func _land() -> void:
 		await get_tree().create_timer(d).timeout
 	else:
 		_sad = true
-		_result_sb.border_color = Color(0.5, 0.55, 0.7, 0.8)
-		_result_big.text = "아깝다…! 꽝" if _near_miss else "꽝…"
-		_result_big.label_settings.font_color = Color(0.78, 0.82, 0.95)
-		_result_sub.text = "다음엔 등급이 터질지도?"
+		_result_mark.color = Color(PAPER, 0.4)
+		_result_big.text = "아깝다… 꽝" if _near_miss else "꽝"
+		_result_big.label_settings.font_color = Color(PAPER, 0.82)
+		_result_sub.text = "다음엔 등급이 터질지도 몰라요"
 		Kit.sfx("groan")
 		await get_tree().create_timer(1.3).timeout
 		_land_zoom = 0.45

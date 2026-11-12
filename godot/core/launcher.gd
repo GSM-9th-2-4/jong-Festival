@@ -120,8 +120,8 @@ func _ready() -> void:
 	_holder.size = Vector2(W, H)
 	_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_holder)
-	UI.text(_ui, BRAND, 28, Vector2(56, 26), Kit.GOLD, true, 6)
-	_right = UI.text(_ui, "", 22, Vector2(W - 56, 30), UI.GRAY, true, 5, 1)
+	UI.text(_ui, BRAND, 15, Vector2(56, 37), UI.WHITE, false, 2, -1, false, 800)  # 화면에 하나뿐인 영문 대문자 라벨
+	_right = UI.text(_ui, "", 16, Vector2(W - 56, 36), UI.GRAY, false, 0, 1, false, 600)
 	UI.rect(_ui, Rect2(56, 70, W - 112, 1), UI.LINE)
 	UI.rect(_ui, Rect2(56, 69, 84, 2), Kit.GOLD)
 	_hints = HBoxContainer.new()
@@ -310,12 +310,12 @@ func _set_hints(items: Array) -> void:  # [[키, 설명, 눌렀을 때(선택)],
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var k := Label.new()
 		k.text = it[0]
-		k.label_settings = UI.settings(19, UI.WHITE, true, 2)
+		k.label_settings = UI.settings(14, UI.WHITE, true, 0, false, 700)
 		chip.add_child(k)
 		box.add_child(chip)
 		var l := Label.new()
 		l.text = it[1]
-		l.label_settings = UI.settings(18, UI.GRAY, false, 0, true)
+		l.label_settings = UI.settings(17, UI.GRAY, false, 0, true)
 		box.add_child(l)
 		if it.size() > 2:
 			var cb: Callable = it[2]
@@ -331,8 +331,8 @@ func _chip_style() -> StyleBoxFlat:
 	var sb := UI.flat(Color(1, 1, 1, 0.07), 6, Color(1, 1, 1, 0.28), 1)
 	sb.content_margin_left = 10
 	sb.content_margin_right = 10
-	sb.content_margin_top = 5
-	sb.content_margin_bottom = 1
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
 	return sb
 
 
@@ -340,7 +340,7 @@ func _toast(msg: String, color := Color(0.62, 0.14, 0.2, 0.96)) -> void:
 	for c in _toast_box.get_children():
 		c.queue_free()
 	var p := UI.panel(_toast_box, Rect2(W / 2 - 330, 9, 660, 54), UI.flat(color, 27, Color(1, 1, 1, 0.3), 1))
-	UI.text(p, msg, 22, Vector2(330, 12), UI.WHITE, false, 0, 0)
+	UI.text(p, msg, 20, Vector2(330, 14), UI.WHITE, false, 0, 0)
 	p.modulate.a = 0.0
 	var tw := p.create_tween()
 	tw.tween_property(p, "modulate:a", 1.0, 0.25)
@@ -455,20 +455,15 @@ func _input(e: InputEvent) -> void:
 # ---------- 대기 화면 ----------
 
 func _build_attract(scr: Control) -> void:
-	_right.text = "COUPON EVENT"
+	_right.text = "할인 쿠폰 이벤트"
 	_set_hints([])
 	_set_dim(0.0)
 	_back.set_mode(-1.75)
 	_tier_hl.clear()
 	_hot = -1
-	UI.gradient(scr, Rect2(0, 0, 860, H), [[0.0, Color(0, 0, 0.02, 0.62)], [1.0, Color(0, 0, 0.02, 0.0)]], Vector2(0, 0), Vector2(1, 0))
-	UI.text(scr, "MINI GAME ARCADE", 28, Vector2(82, 128), Color(0.56, 0.78, 1.0), true, 12)
-	var title := UI.text(scr, TITLE, 132, Vector2(74, 150), Color(1.0, 0.965, 0.9))
-	title.label_settings.shadow_size = 2
-	title.label_settings.shadow_color = Color(0, 0, 0, 0.45)
-	title.label_settings.shadow_offset = Vector2(0, 5)
-	UI.rect(scr, Rect2(82, 326, 96, 3), Kit.GOLD)
-	UI.text(scr, "게임 한 판, 할인 쿠폰 한 장", 34, Vector2(80, 346), Color(0.9, 0.92, 0.98), false, 0, -1, true)
+	UI.gradient(scr, Rect2(0, 0, 900, H), [[0.0, Color(0, 0, 0.02, 0.7)], [1.0, Color(0, 0, 0.02, 0.0)]], Vector2(0, 0), Vector2(1, 0))
+	UI.text(scr, TITLE, 136, Vector2(74, 128), UI.WHITE, false, -4, -1, false, 900)
+	UI.text(scr, "게임 한 판, 할인 쿠폰 한 장", 34, Vector2(80, 300), Color(UI.WHITE, 0.86), false, 0, -1, false, 500)
 
 	var prizes: Array = []
 	for p in Store.PRIZES:
@@ -476,27 +471,27 @@ func _build_attract(scr: Control) -> void:
 			prizes.append(p["name"])
 	prizes.sort_custom(func(a, b): return Store.rank(a) < Store.rank(b))
 	var n := prizes.size()
-	var gap := 18.0
+	var gap := 16.0
 	var cw := (W - 160.0 - gap * (n - 1)) / maxf(1, n)
-	UI.text(scr, "PRIZES", 20, Vector2(82, 428), UI.GRAY, true, 8)
+	UI.text(scr, "오늘의 경품", 18, Vector2(82, 432), UI.GRAY, false, 0, -1, false, 600)
 	for i in n:
 		var t: Dictionary = Kit.tier(Store.rank(prizes[i]))
 		var c: Color = t["color"]
-		var r := Rect2(80 + i * (cw + gap), 462, cw, 118)
-		var g := UI.glass(scr, r, 14, Color(1, 1, 1, 0.13), 0.6)
-		var hl := UI.panel(g, Rect2(Vector2.ZERO, r.size), UI.outline(c, 14, 2))
+		var r := Rect2(80 + i * (cw + gap), 466, cw, 108)
+		var g := UI.glass(scr, r, 12, Color(1, 1, 1, 0.1), 0.72)
+		var hl := UI.panel(g, Rect2(Vector2.ZERO, r.size), UI.outline(Color(UI.WHITE, 0.75), 12, 2))
 		hl.modulate.a = 0.0
 		_tier_hl.append(hl)
-		UI.rect(g, Rect2(22, 22, 4, 30), c)
-		UI.text(g, t["name"], 30, Vector2(38, 21), c, true, 4)
-		UI.text(g, t["kor"], 17, Vector2(cw - 22, 26), UI.GRAY, false, 0, 1, true)
-		UI.text(g, prizes[i], 25, Vector2(22, 68), UI.WHITE)
+		UI.panel(g, Rect2(22, 25, 10, 10), UI.flat(c, 3))  # 등급 색은 이 작은 표식 하나에만
+		UI.text(g, "%s 등급" % t["kor"], 16, Vector2(42, 19), UI.GRAY, false, 0, -1, false, 600)
+		var pl := UI.text(g, prizes[i], 28, Vector2(21, 52), UI.WHITE, false, 0, -1, false, 800)
+		while pl.label_settings.font_size > 18 and pl.get_minimum_size().x > cw - 40:
+			pl.label_settings.font_size -= 1
 
-	var press := UI.text(scr, "PRESS ANY KEY", 34, Vector2(W / 2, 612), UI.WHITE, true, 12, 0)
+	var press := UI.text(scr, "화면을 터치하거나 아무 키나 누르면 시작해요", 26, Vector2(W / 2, 622), UI.WHITE, false, 0, 0, false, 700)
 	var tw := press.create_tween().set_loops()
-	tw.tween_property(press, "modulate:a", 0.35, 0.9).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(press, "modulate:a", 1.0, 0.9).set_trans(Tween.TRANS_SINE)
-	UI.text(scr, "화면을 터치하거나 아무 키나 누르세요", 19, Vector2(W / 2, 660), UI.GRAY, false, 0, 0, true)
+	tw.tween_property(press, "modulate:a", 0.45, 1.1).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(press, "modulate:a", 1.0, 1.1).set_trans(Tween.TRANS_SINE)
 
 
 func _key_attract(k: int) -> void:
@@ -513,15 +508,15 @@ func _key_attract(k: int) -> void:
 # ---------- 게임 선택 ----------
 
 func _build_menu(scr: Control) -> void:
-	_right.text = "SELECT GAME"
+	_right.text = "게임 선택"
 	_set_dim(0.42)
 	_back.set_mode(0.0, Backdrop.WARM, 0.16)
 	sel = clampi(sel, 0, maxi(0, games.size() - 1))
-	UI.text(scr, "게임을 골라주세요", 42, Vector2(56, 96), UI.WHITE)
+	UI.text(scr, "게임을 골라주세요", 42, Vector2(56, 92), UI.WHITE, false, 0, -1, false, 800)
 	if not pending.is_empty():
-		UI.text(scr, "이어서 도전! 아무 게임이나 골라도 결과는 같아요", 19, Vector2(58, 152), UI.GRAY, false, 0, -1, true)
-	_counter = UI.text(scr, "", 56, Vector2(W - 124, 92), Kit.GOLD, true, 2, 1)
-	UI.text(scr, "/ %02d" % games.size(), 28, Vector2(W - 112, 116), UI.GRAY, true, 2)
+		UI.text(scr, "이어서 도전하세요. 어떤 게임을 골라도 결과는 같아요", 18, Vector2(58, 150), UI.GRAY, false, 0, -1, true)
+	_counter = UI.text(scr, "", 42, Vector2(W - 104, 92), UI.WHITE, true, 0, 1, false, 800)
+	UI.text(scr, "/ %02d" % games.size(), 20, Vector2(W - 96, 114), UI.GRAY, true, 0, -1, false, 600)
 	_grid = Control.new()
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scr.add_child(_grid)
@@ -529,12 +524,12 @@ func _build_menu(scr: Control) -> void:
 	_dots.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scr.add_child(_dots)
 	if games.size() > PER_PAGE:
-		UI.button(scr, Rect2(8, 372, 40, 72), "<", 30, true, func(): _move(-PER_PAGE))
-		UI.button(scr, Rect2(W - 48, 372, 40, 72), ">", 30, true, func(): _move(PER_PAGE))
-	_set_hints([["<  >", "선택"], ["ENTER", "시작", _start_game], ["ESC", "처음으로", func(): _goto("attract")]])
+		UI.button(scr, Rect2(8, 372, 40, 72), "‹", 34, true, func(): _move(-PER_PAGE))
+		UI.button(scr, Rect2(W - 48, 372, 40, 72), "›", 34, true, func(): _move(PER_PAGE))
+	_set_hints([["←  →", "선택"], ["Enter", "시작", _start_game], ["Esc", "처음으로", func(): _goto("attract")]])
 	_page = -1
 	if games.is_empty():
-		UI.text(scr, "games/ 폴더에 게임이 없어요", 30, Vector2(W / 2, 340), UI.GRAY, false, 0, 0)
+		UI.text(scr, "games/ 폴더에 게임이 없어요", 28, Vector2(W / 2, 340), UI.GRAY, false, 0, 0)
 		return
 	_refresh_menu(false)
 
@@ -600,8 +595,9 @@ func _make_card(index: int, g: Dictionary, r: Rect2) -> Control:
 	_grid.add_child(card)
 
 	var glow_sb := UI.outline(Color(0, 0, 0, 0), 16, 0)
-	glow_sb.shadow_color = Color(1.0, 0.72, 0.3, 0.3)
-	glow_sb.shadow_size = 20
+	glow_sb.shadow_color = Color(0, 0, 0, 0.55)  # 고른 카드는 떠오른 듯한 그림자 (빛 번짐 아님)
+	glow_sb.shadow_size = 26
+	glow_sb.shadow_offset = Vector2(0, 12)
 	var glow := UI.panel(card, Rect2(Vector2.ZERO, size), glow_sb)
 	glow.name = "glow"
 
@@ -620,15 +616,17 @@ func _make_card(index: int, g: Dictionary, r: Rect2) -> Control:
 	else:  # 썸네일 없는 게임: 색 그라데이션 + 첫 글자
 		UI.gradient(body, Rect2(Vector2.ZERO, size), [[0.0, hue.lightened(0.12)], [0.55, hue.darkened(0.55)], [1.0, Color(0.03, 0.035, 0.06)]], Vector2(0.1, 0), Vector2(0.9, 1))
 		if size.y > 300:
-			UI.text(body, str(g["name"]).substr(0, 1), int(size.y * 0.42), Vector2(size.x / 2, size.y * 0.06), Color(1, 1, 1, 0.92), false, 0, 0)
+			UI.text(body, str(g["name"]).substr(0, 1), int(size.y * 0.4), Vector2(size.x / 2, size.y * 0.06), Color(UI.WHITE, 0.92), false, 0, 0, false, 900)
 			UI.rect(body, Rect2(size.x / 2 - 22, size.y * 0.56, 44, 2), Color(1, 1, 1, 0.5))
 		else:
-			UI.text(body, str(g["name"]).substr(0, 1), int(size.y * 0.5), Vector2(size.x - 24, size.y * 0.02), Color(1, 1, 1, 0.3), false, 0, 1)
+			UI.text(body, str(g["name"]).substr(0, 1), int(size.y * 0.48), Vector2(size.x - 24, size.y * 0.02), Color(UI.WHITE, 0.3), false, 0, 1, false, 900)
 	UI.gradient(body, Rect2(Vector2.ZERO, size), [[0.0, Color(0.02, 0.025, 0.05, 0.35)], [0.22, Color(0.02, 0.025, 0.05, 0.0)], [0.5, Color(0.02, 0.025, 0.05, 0.0)], [0.9, Color(0.02, 0.025, 0.05, 0.94)]])
-	UI.text(body, "%02d" % (index + 1), 32, Vector2(22, 16), UI.WHITE, true, 2)
+	UI.text(body, "%02d" % (index + 1), 20, Vector2(22, 18), Color(UI.WHITE, 0.85), true, 0, -1, false, 700)
 	var big := size.y > 300
-	UI.text(body, g["name"], 36 if big else 28, Vector2(22, size.y - (104 if big else 84)), UI.WHITE)
-	var tag := UI.text(body, g["tagline"], 19 if big else 17, Vector2(23, size.y - (50 if big else 42)), Color(0.78, 0.81, 0.9), false, 0, -1, true)
+	var nl := UI.text(body, g["name"], 34 if big else 26, Vector2(22, size.y - (102 if big else 82)), UI.WHITE, false, 0, -1, false, 800)
+	while nl.label_settings.font_size > 18 and nl.get_minimum_size().x > size.x - 44:
+		nl.label_settings.font_size -= 1
+	var tag := UI.text(body, g["tagline"], 18 if big else 16, Vector2(23, size.y - (50 if big else 42)), Color(UI.WHITE, 0.72), false, 0, -1, true)
 	tag.size.x = size.x - 44
 	tag.clip_text = true
 	var veil := UI.rect(body, Rect2(Vector2.ZERO, size), Color(0.01, 0.012, 0.03, 0.32))
@@ -637,8 +635,8 @@ func _make_card(index: int, g: Dictionary, r: Rect2) -> Control:
 	UI.panel(card, Rect2(Vector2.ZERO, size), UI.outline(Color(1, 1, 1, 0.16), 16, 1))
 	var selp := UI.panel(card, Rect2(Vector2.ZERO, size), UI.outline(Kit.GOLD, 16, 2))
 	selp.name = "sel"
-	var play := UI.panel(selp, Rect2(size.x - 104, 16, 88, 34), UI.flat(Kit.GOLD, 6))
-	UI.text(play, "PLAY  >", 22, Vector2(44, 6), UI.INK, true, 3, 0).label_settings.shadow_size = 0
+	var play := UI.panel(selp, Rect2(size.x - 80, 16, 64, 32), UI.flat(Kit.GOLD, 6))
+	UI.text(play, "시작", 17, Vector2(32, 5), UI.INK, false, 0, 0, false, 800)
 
 	card.mouse_entered.connect(func():
 		if _state == "menu" and sel != index:
@@ -779,131 +777,92 @@ func _build_result(scr: Control) -> void:
 	_timeout = 60.0 if win else 9.0
 	UI.rect(scr, Rect2(0, H - 4, W, 4), Color(1, 1, 1, 0.1))
 	_bar = UI.rect(scr, Rect2(0, H - 4, W, 4), c if win else UI.GRAY)
-	var hint := UI.text(scr, "아무 키나 누르거나 화면을 터치하면 처음으로", 18, Vector2(W / 2, 672), UI.GRAY, false, 0, 0, true)
+	var hint := UI.text(scr, "아무 키나 누르거나 화면을 터치하면 처음으로", 17, Vector2(W / 2, 672), UI.GRAY, false, 0, 0, true)
 	hint.modulate.a = 0.0
 	hint.create_tween().tween_property(hint, "modulate:a", 1.0, 0.4).set_delay(RESULT_LOCK)
 	if not win:
-		_right.text = "RESULT"
-		_set_dim(0.74)
+		_right.text = "결과"
+		_set_dim(0.84)
 		_back.set_mode(0.0, Color(0.4, 0.46, 0.7), 0.24)
 		Kit.sfx("lose")
-		UI.text(scr, "NO LUCK THIS TIME", 30, Vector2(W / 2, 150), UI.GRAY, true, 14, 0)
 		var holder := Control.new()
-		holder.position = Vector2(W / 2, 350)
+		holder.position = Vector2(W / 2, 318)
 		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		scr.add_child(holder)
-		var big := UI.text(holder, "꽝", 250, Vector2(0, -170), Color(0.84, 0.87, 0.97), false, 0, 0)
-		big.label_settings.shadow_size = 2
-		big.label_settings.shadow_color = Color(0.1, 0.14, 0.4, 0.6)
-		big.label_settings.shadow_offset = Vector2(0, 7)
-		holder.scale = Vector2(0.6, 0.6)
-		holder.rotation_degrees = -6.0
-		var tw := holder.create_tween().set_parallel()
-		tw.tween_property(holder, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.tween_property(holder, "rotation_degrees", 0.0, 0.9).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-		UI.rect(scr, Rect2(W / 2 - 48, 520, 96, 2), Color(1, 1, 1, 0.35))
-		UI.text(scr, "아쉽지만 다음 기회에!", 36, Vector2(W / 2, 544), UI.WHITE, false, 0, 0, true)
+		UI.text(holder, "꽝", 230, Vector2(0, -150), UI.WHITE, false, 0, 0, false, 900)
+		holder.scale = Vector2(0.94, 0.94)
+		holder.create_tween().tween_property(holder, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		UI.text(scr, "아쉽지만 다음 기회에 만나요", 32, Vector2(W / 2, 486), UI.WHITE, false, 0, 0, false, 700)
+		UI.text(scr, "오늘 축제, 즐겁게 보내세요", 20, Vector2(W / 2, 540), UI.GRAY, false, 0, 0, true)
 		return
 
-	_right.text = "YOU WIN"
-	_set_dim(0.4)
+	_right.text = "당첨"
+	_set_dim(0.62)
 	_back.set_mode(0.0, c, 0.2)
 	Kit.sfx("jackpot" if rank == Kit.TOP_TIER else "win")
+	scr.add_child(Kit.confetti(Vector2(W, H), c, rank, 5.0, 2))  # 종이 꽃가루가 쿠폰 뒤로 천천히 내림
 
-	var embers := CPUParticles2D.new()  # 등급 색 불티가 천천히 떠오름
-	embers.position = Vector2(W / 2, H + 10)
-	embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	embers.emission_rect_extents = Vector2(W / 2, 6)
-	embers.amount = 14 + 12 * rank
-	embers.lifetime = 7.0
-	embers.preprocess = 3.0
-	embers.direction = Vector2(0, -1)
-	embers.spread = 14.0
-	embers.gravity = Vector2(0, -6)
-	embers.initial_velocity_min = 50.0
-	embers.initial_velocity_max = 120.0
-	embers.scale_amount_min = 0.4
-	embers.scale_amount_max = 1.3
-	var eg := Gradient.new()
-	eg.set_color(0, Color(c.lightened(0.4), 0.0))
-	eg.add_point(0.15, Color(c.lightened(0.3), 0.8))
-	eg.set_color(eg.get_point_count() - 1, Color(c, 0.0))
-	embers.color_ramp = eg
-	var dot := GradientTexture2D.new()
-	dot.gradient = Gradient.new()
-	dot.gradient.colors = PackedColorArray([Color.WHITE, Color(1, 1, 1, 0)])
-	dot.fill = GradientTexture2D.FILL_RADIAL
-	dot.fill_from = Vector2(0.5, 0.5)
-	dot.fill_to = Vector2(1.0, 0.5)
-	dot.width = 8
-	dot.height = 8
-	embers.texture = dot
-	scr.add_child(embers)
-
-	UI.text(scr, t["name"], 40, Vector2(W / 2, 92), c, true, 16, 0)
-	UI.text(scr, "대박 터졌다!" if rank == Kit.TOP_TIER else "축하합니다!", 54, Vector2(W / 2, 134), Color(1.0, 0.95, 0.84), false, 0, 0)
+	UI.text(scr, "%s 등급 당첨" % t["kor"], 50, Vector2(W / 2, 102), UI.WHITE, false, 0, 0, false, 800)
 
 	var tw_size := Vector2(940, 300)
-	var split := 548.0
+	var split := 516.0
+	var rest := Vector2(W / 2 - tw_size.x / 2, 208)
 	_ticket = Control.new()
-	_ticket.position = Vector2(W / 2 - tw_size.x / 2, 228)
+	_ticket.position = rest
 	_ticket.size = tw_size
 	_ticket.pivot_offset = tw_size / 2
 	_ticket.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scr.add_child(_ticket)
-	var halo_sb := UI.outline(Color(0, 0, 0, 0), 22, 0)
-	halo_sb.shadow_color = Color(c, 0.38)
-	halo_sb.shadow_size = 46
-	var halo := UI.panel(_ticket, Rect2(Vector2.ZERO, tw_size), halo_sb)
-	var hw := halo.create_tween().set_loops()
-	hw.tween_property(halo, "modulate:a", 0.55, 1.2).set_trans(Tween.TRANS_SINE)
-	hw.tween_property(halo, "modulate:a", 1.0, 1.2).set_trans(Tween.TRANS_SINE)
-	var body := UI.glass(_ticket, Rect2(Vector2.ZERO, tw_size), 22, Color(c, 0.9), 0.74, Color(0.035, 0.04, 0.075))
-	(body.get_meta("border") as Panel).add_theme_stylebox_override("panel", UI.outline(Color(c, 0.95), 22, 2))
-	UI.rect(body, Rect2(2, 30, 6, tw_size.y - 60), c)
-	UI.text(body, "DISCOUNT COUPON", 24, Vector2(44, 30), UI.GRAY, true, 7)
-	UI.text(body, "%s 등급" % t["kor"], 22, Vector2(split - 34, 31), c, false, 1, 1)
-	UI.rect(body, Rect2(44, 72, split - 78, 1), UI.LINE)
-	var psize := 78
-	var pfont := UI.font(false)
-	while psize > 36 and pfont.get_string_size(last_prize, HORIZONTAL_ALIGNMENT_LEFT, -1, psize).x > split - 84:
+	Kit.soft_shadow(_ticket, Rect2(10, 6, tw_size.x - 20, tw_size.y - 12), 12.0, 38.0, 0.62, Vector2(0, 22))  # 바닥에 닿은 그림자
+
+	var paper := UI.rect(Kit.round_clip(_ticket, tw_size, 12.0), Rect2(Vector2.ZERO, tw_size), Kit.PAPER)  # 종이 한 장: 절취선 구멍이 실제로 뚫려 있음
+	paper.material = Kit.paper_material(tw_size, 12.0, split, 13.0)
+	var foil := UI.rect(paper, Rect2(0, 0, tw_size.x, 54), c)  # 등급 색 박 띠 (빛이 훑고 지나감)
+	foil.material = Kit.foil_material(foil.size, true, 3.6, Vector3(split, 0.0, 13.0))
+	UI.rect(paper, Rect2(0, 54, tw_size.x, 1), Color(UI.INK, 0.18))
+	UI.text(paper, "%s 할인 쿠폰" % TITLE, 19, Vector2(36, 15), UI.INK, false, 0, -1, false, 800)
+	UI.text(paper, "%s 등급" % t["kor"], 19, Vector2(tw_size.x - 36, 15), UI.INK, false, 0, 1, false, 800)
+
+	var psize := 86
+	while psize > 36 and UI.font(false, -int(round(psize * 0.025)), false, 900).get_string_size(last_prize, HORIZONTAL_ALIGNMENT_LEFT, -1, psize).x > split - 76:
 		psize -= 2
-	var pl := UI.text(body, last_prize, psize, Vector2(42, 150 - psize * 0.62), UI.WHITE)
-	pl.label_settings.shadow_color = Color(0, 0, 0, 0.6)
-	pl.label_settings.shadow_offset = Vector2(0, 4)
-	UI.text(body, "%s  ·  1회 사용  ·  스태프 확인 후 할인" % TITLE, 19, Vector2(44, 248), UI.GRAY, false, 0, -1, true)
+	var pl := UI.text(paper, last_prize, psize, Vector2(34, 72), UI.INK, false, -int(round(psize * 0.025)), -1, false, 900)
+	pl.size.y = 136
+	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	UI.text(paper, "1회 사용  ·  스태프 확인 후 할인", 18, Vector2(37, 218), Color(UI.INK, 0.66), false, 0, -1, false, 600)
+	var now := Time.get_datetime_dict_from_system()
+	UI.text(paper, "No. %04d  ·  %04d.%02d.%02d %02d:%02d" % [_plays().size(), now["year"], now["month"], now["day"], now["hour"], now["minute"]],
+		15, Vector2(37, 252), Color(UI.INK, 0.46), true, 0, -1, false, 500)
+
 	var cx := (split + tw_size.x) / 2
-	UI.text(body, "COUPON CODE", 22, Vector2(cx, 30), UI.GRAY, true, 8, 0)
-	var code := UI.text(body, last_code, 98, Vector2(cx + 3, 86), Color(1.0, 0.91, 0.66), true, 6, 0)
-	code.label_settings.shadow_color = Color(0, 0, 0, 0.6)
-	code.label_settings.shadow_offset = Vector2(0, 4)
-	var deco := Control.new()
-	deco.size = tw_size
-	deco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	body.add_child(deco)
-	var seed_code := last_code
-	deco.draw.connect(func():
-		var y := 18.0
-		while y < tw_size.y - 18:  # 절취선
-			deco.draw_line(Vector2(split, y), Vector2(split, y + 7), Color(c, 0.75), 1.5)
-			y += 14.0
-		var rng := RandomNumberGenerator.new()  # 장식용 바코드
-		rng.seed = hash(seed_code)
-		var x := cx - 130.0
-		while x < cx + 130.0:
-			var bw := float([1, 1, 2, 3][rng.randi() % 4])
-			deco.draw_rect(Rect2(x, 222, bw, 44), Color(0.82, 0.85, 0.94, 0.85))
-			x += bw + float([2, 2, 3, 4][rng.randi() % 4]))
-	_ticket.scale = Vector2(0.86, 0.86)
+	UI.text(paper, "쿠폰 코드", 17, Vector2(cx, 84), Color(UI.INK, 0.58), false, 0, 0, false, 700)
+	var pitch := 53.0
+	for i in last_code.length():  # 글자마다 같은 너비의 칸에, 세 글자씩 끊어서 — 멀리서도 또박또박 읽히게
+		var x := cx + (i - (last_code.length() - 1) / 2.0) * pitch + (16.0 if i >= 3 else -16.0)
+		UI.text(paper, last_code[i], 72, Vector2(x, 108), UI.INK, true, 1, 0, false, 800)
+	UI.rect(paper, Rect2(cx - 150, 210, 300, 1), Color(UI.INK, 0.16))
+	UI.text(paper, "스태프에게 보여주세요", 16, Vector2(cx, 226), Color(UI.INK, 0.58), false, 0, 0, false, 600)
+
+	# 등장: 살짝 기운 채 내려앉아 자리를 잡고, 그 뒤로 아주 느리게 흔들림
+	_ticket.position = rest + Vector2(0, 54)
+	_ticket.scale = Vector2(0.9, 0.9)
+	_ticket.rotation_degrees = -6.0
 	_ticket.modulate.a = 0.0
 	var tt := _ticket.create_tween().set_parallel()
+	tt.tween_property(_ticket, "position", rest, 0.6).set_delay(0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tt.tween_property(_ticket, "scale", Vector2.ONE, 0.6).set_delay(0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tt.tween_property(_ticket, "modulate:a", 1.0, 0.3).set_delay(0.2)
+	tt.tween_property(_ticket, "rotation_degrees", -1.4, 0.8).set_delay(0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tt.tween_property(_ticket, "modulate:a", 1.0, 0.25).set_delay(0.2)
+	var ticket := _ticket
+	tt.chain().tween_callback(func():
+		var sway := ticket.create_tween().set_loops()
+		sway.tween_property(ticket, "rotation_degrees", -0.9, 2.6).set_trans(Tween.TRANS_SINE)
+		sway.tween_property(ticket, "rotation_degrees", -1.4, 2.6).set_trans(Tween.TRANS_SINE))
 
-	var show := UI.text(scr, "스태프에게 이 화면을 보여주세요", 34, Vector2(W / 2, 566), UI.WHITE, false, 0, 0)
+	var show := UI.text(scr, "스태프에게 이 화면을 보여주세요", 30, Vector2(W / 2, 562), UI.WHITE, false, 0, 0, false, 700)
 	show.modulate.a = 0.0
 	show.create_tween().tween_property(show, "modulate:a", 1.0, 0.4).set_delay(0.7)
-	UI.text(scr, "STAFF  F2  사용 처리", 15, Vector2(W - 56, 680), Color(1, 1, 1, 0.28), false, 1, 1, true)
+	UI.text(scr, "스태프  F2  사용 처리", 14, Vector2(W - 56, 682), Color(UI.WHITE, 0.3), false, 0, 1, true)
 
 
 func _key_result(k: int) -> void:
@@ -917,33 +876,65 @@ func _key_result(k: int) -> void:
 		_goto("attract")
 
 
-func _stamp() -> void:
+const STAMP_SHADER := "
+shader_type canvas_item;
+render_mode unshaded;
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
+float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vn(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void fragment() {
+	vec4 c = textureLod(screen_texture, SCREEN_UV, 0.0);
+	if (c.a > 0.0001) { c.rgb /= c.a; }
+	vec2 p = FRAGCOORD.xy;
+	float n = vn(p * 0.07) * 0.55 + vn(p * 0.29) * 0.45;
+	float ink = smoothstep(0.2, 0.5, n) * (0.84 + 0.16 * h21(floor(p)));
+	COLOR *= c;
+	COLOR.a *= mix(0.38, 0.94, ink);
+}
+"
+
+
+func _stamp() -> void:  # 잉크 도장: 붉은 잉크가 고르지 않게 묻은 느낌
 	Kit.sfx("coin")
-	var st := Control.new()
-	st.position = Vector2(372, 196)  # 왼쪽 칸 아래 — 쿠폰 코드는 가리지 않게
-	st.rotation_degrees = -11.0
-	st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ink := Color(0.8, 0.12, 0.1)
+	var st := CanvasGroup.new()
+	st.position = Vector2(352, 208)  # 왼쪽 칸 아래 — 쿠폰 코드는 가리지 않게
+	st.rotation_degrees = -9.0
+	var sh := Shader.new()
+	sh.code = STAMP_SHADER
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	st.material = mat
 	_ticket.add_child(st)
-	var p := UI.panel(st, Rect2(-150, -50, 300, 100), UI.flat(Color(0.05, 0.02, 0.04, 0.92), 10, UI.RED, 4))
-	UI.panel(p, Rect2(8, 8, 284, 84), UI.outline(Color(UI.RED, 0.6), 5, 1))
-	UI.text(p, "사용 완료", 52, Vector2(150, 16), UI.RED, false, 5, 0)
-	st.scale = Vector2(2.2, 2.2)
+	UI.panel(st, Rect2(-146, -54, 292, 108), UI.outline(ink, 12, 5))
+	UI.panel(st, Rect2(-136, -44, 272, 88), UI.outline(ink, 6, 2))
+	UI.text(st, "사용 완료", 50, Vector2(0, -42), ink, false, 2, 0, false, 900)
+	var now := Time.get_datetime_dict_from_system()
+	UI.text(st, "%02d.%02d  %02d:%02d" % [now["month"], now["day"], now["hour"], now["minute"]], 14, Vector2(0, 20), ink, true, 1, 0, false, 700)
+	st.scale = Vector2(1.7, 1.7)
 	st.modulate.a = 0.0
 	var tw := st.create_tween().set_parallel()
-	tw.tween_property(st, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(st, "modulate:a", 1.0, 0.12)
+	tw.tween_property(st, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(st, "modulate:a", 1.0, 0.1)
+	var press := _ticket.create_tween()  # 쾅 찍히는 순간 쿠폰이 살짝 눌림
+	press.tween_interval(0.16)
+	press.tween_property(_ticket, "scale", Vector2(0.985, 0.985), 0.05)
+	press.tween_property(_ticket, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 # ---------- 관리자: PIN ----------
 
 func _build_pin(scr: Control) -> void:
-	_right.text = "ADMIN"
+	_right.text = "관리자"
 	_set_dim(0.66)
 	_back.set_mode(0.0, Backdrop.WARM, 0.22)
-	_set_hints([["0-9", "입력"], ["ENTER", "확인", _pin_submit], ["ESC", "취소", func(): _goto("attract")]])
+	_set_hints([["0–9", "입력"], ["Enter", "확인", _pin_submit], ["Esc", "취소", func(): _goto("attract")]])
 	_pin_panel = UI.glass(scr, Rect2(W / 2 - 210, 104, 420, 536), 20, Color(Kit.GOLD, 0.6), 0.7)
-	UI.text(_pin_panel, "ACCESS CODE", 22, Vector2(210, 34), UI.GRAY, true, 9, 0)
-	UI.text(_pin_panel, "관리자 PIN", 32, Vector2(210, 66), UI.WHITE, false, 0, 0)
+	UI.text(_pin_panel, "관리자 PIN", 30, Vector2(210, 40), UI.WHITE, false, 0, 0, false, 800)
+	UI.text(_pin_panel, "숫자를 입력하고 확인을 누르세요", 16, Vector2(210, 86), UI.GRAY, false, 0, 0, true)
 	_pin_dots = Control.new()
 	_pin_dots.position = Vector2(210, 150)
 	_pin_dots.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -956,22 +947,22 @@ func _build_pin(scr: Control) -> void:
 				_pin_dots.draw_circle(Vector2(x, 0), 10, Kit.GOLD)
 			else:
 				_pin_dots.draw_arc(Vector2(x, 0), 9, 0, TAU, 32, Color(1, 1, 1, 0.3), 2.0, true))
-	var keys := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "DEL", "0", "OK"]
+	var keys := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "지움", "0", "확인"]
 	for i in keys.size():
 		var key: String = keys[i]
 		var r := Rect2(48 + (i % 3) * 112, 200 + (i / 3) * 76, 100, 64)
 		var cb := func():
-			if key == "DEL":
+			if key == "지움":
 				_typed = _typed.left(-1)
-			elif key == "OK":
+			elif key == "확인":
 				_pin_submit()
 				return
 			elif _typed.length() < 8:
 				_typed += key
 			Kit.sfx("tick", -8.0)
 			_pin_dots.queue_redraw()
-		var b := UI.button(_pin_panel, r, key, 30 if key.length() == 1 else 22, true, cb)
-		if key == "OK":
+		var b := UI.button(_pin_panel, r, key, 28 if key.length() == 1 else 19, true, cb)
+		if key == "확인":
 			b.add_theme_stylebox_override("normal", UI.flat(Color(Kit.GOLD, 0.16), 8, Color(Kit.GOLD, 0.7), 1))
 
 
@@ -1015,13 +1006,13 @@ func _key_pin(k: int, e: InputEventKey) -> void:
 # ---------- 관리자 ----------
 
 func _build_admin(scr: Control) -> void:
-	_right.text = "ADMIN"
+	_right.text = "관리자"
 	_set_dim(0.7)
 	_back.set_mode(0.0, Backdrop.WARM, 0.22)
-	_set_hints([["F5", "CSV 내보내기", _admin_export], ["F10", "프로그램 종료", func(): get_tree().quit()], ["F11", "전체화면", _toggle_fullscreen], ["ESC", "닫기", func(): _goto("attract")]])
-	UI.text(scr, "관리자", 40, Vector2(56, 90), UI.WHITE)
+	_set_hints([["F5", "CSV 내보내기", _admin_export], ["F10", "프로그램 종료", func(): get_tree().quit()], ["F11", "전체화면", _toggle_fullscreen], ["Esc", "닫기", func(): _goto("attract")]])
+	UI.text(scr, "관리자", 40, Vector2(56, 90), UI.WHITE, false, 0, -1, false, 800)
 	if dry:
-		UI.text(scr, "DRY RUN  ·  기록 파일에 저장되지 않음", 17, Vector2(190, 110), UI.RED, false, 1, -1, true)
+		UI.text(scr, "연습 모드  ·  기록 파일에 저장되지 않음", 16, Vector2(186, 112), UI.RED, false, 0, -1, false, 600)
 	UI.glass(scr, Rect2(56, 158, 790, 300), 16)
 	UI.glass(scr, Rect2(866, 158, 358, 300), 16)
 	_admin_stats = Control.new()
@@ -1030,15 +1021,15 @@ func _build_admin(scr: Control) -> void:
 	_admin_refresh()
 
 	var box := UI.glass(scr, Rect2(56, 474, 1168, 180), 16, Color(Kit.GOLD, 0.55))
-	UI.text(box, "쿠폰 사용 처리", 20, Vector2(24, 14), UI.WHITE)
+	UI.text(box, "쿠폰 사용 처리", 19, Vector2(24, 15), UI.WHITE)
 	UI.panel(box, Rect2(24, 50, 300, 78), UI.flat(Color(0.01, 0.012, 0.025, 0.85), 10, Color(Kit.GOLD, 0.8), 1))
-	_code_label = UI.text(box, "", 60, Vector2(174, 56), UI.WHITE, true, 9, 0)
-	_msg = UI.text(box, "쿠폰 코드를 입력하고 Enter", 20, Vector2(24, 140), UI.GRAY, false, 0, -1, true)
+	_code_label = UI.text(box, "", 46, Vector2(174, 60), UI.WHITE, true, 4, 0, false, 800)
+	_msg = UI.text(box, "쿠폰 코드를 입력하고 Enter", 18, Vector2(24, 141), UI.GRAY, false, 0, -1, true)
 	for i in Store.ALPHABET.length():  # 터치/마우스용 글자판
 		var ch: String = Store.ALPHABET[i]
-		UI.button(box, Rect2(360 + (i % 16) * 49, 22 + (i / 16) * 50, 45, 44), ch, 24, true, func(): _admin_type(ch))
-	UI.button(box, Rect2(360 + 12 * 49, 124, 94, 40), "지우기", 18, false, func(): _admin_type("<"))
-	var ok := UI.button(box, Rect2(360 + 14 * 49, 124, 94, 40), "확인", 18, false, _admin_submit)
+		UI.button(box, Rect2(360 + (i % 16) * 49, 22 + (i / 16) * 50, 45, 44), ch, 21, true, func(): _admin_type(ch))
+	UI.button(box, Rect2(360 + 12 * 49, 124, 94, 40), "지우기", 17, false, func(): _admin_type("<"))
+	var ok := UI.button(box, Rect2(360 + 14 * 49, 124, 94, 40), "확인", 17, false, _admin_submit)
 	ok.add_theme_stylebox_override("normal", UI.flat(Color(Kit.GOLD, 0.16), 8, Color(Kit.GOLD, 0.7), 1))
 	_admin_type("")
 
@@ -1049,13 +1040,13 @@ func _admin_refresh() -> void:
 	var s := _admin_stats
 	var plays := _plays()
 	var total := plays.size()
-	var tl := UI.text(s, str(total), 64, Vector2(W - 96, 84), Kit.GOLD, true, 2, 1)
-	UI.text(s, "판", 24, Vector2(W - 86, 114), UI.GRAY)
-	UI.text(s, "TOTAL PLAYS", 18, Vector2(W - 112 - tl.get_minimum_size().x, 120), UI.GRAY, true, 5, 1)
+	var tl := UI.text(s, str(total), 52, Vector2(W - 90, 82), UI.WHITE, true, 0, 1, false, 800)
+	UI.text(s, "판", 22, Vector2(W - 82, 110), UI.GRAY)
+	UI.text(s, "누적 플레이", 17, Vector2(W - 106 - tl.get_minimum_size().x, 115), UI.GRAY, false, 0, 1, false, 600)
 
 	var cols := [[92.0, "경품", -1], [470.0, "목표", 1], [560.0, "실제", 1], [650.0, "나온 수", 1], [740.0, "사용 완료", 1], [826.0, "남은 수량", 1]]
 	for c in cols:
-		UI.text(s, c[1], 17, Vector2(c[0], 172), UI.GRAY, false, 0, c[2], true)
+		UI.text(s, c[1], 16, Vector2(c[0], 174), UI.GRAY, false, 0, c[2], false, 600)
 	UI.rect(s, Rect2(76, 204, 750, 1), UI.LINE)
 	for i in Store.PRIZES.size():
 		var p: Dictionary = Store.PRIZES[i]
@@ -1066,15 +1057,15 @@ func _admin_refresh() -> void:
 		var y := 214.0 + i * 47.0
 		var lose := name == Store.LOSE
 		UI.rect(s, Rect2(76, y + 9, 4, 24), UI.GRAY if lose else Kit.tier(Store.rank(name))["color"])
-		UI.text(s, name, 23, Vector2(cols[0][0], y + 5), UI.WHITE)
+		UI.text(s, name, 22, Vector2(cols[0][0], y + 8), UI.WHITE)
 		var vals := ["%s%%" % str(p["pct"]), ("%.1f%%" % (n * 100.0 / total)) if total > 0 else "-", str(n), "-" if lose else str(used),
 			"-" if int(p["cap"]) < 0 else str(maxi(0, int(p["cap"]) - n))]
 		for j in vals.size():
-			UI.text(s, vals[j], 30, Vector2(cols[j + 1][0], y + 4), UI.WHITE if j != 1 else Color(0.8, 0.9, 1.0), true, 1, 1)
+			UI.text(s, vals[j], 23, Vector2(cols[j + 1][0], y + 7), UI.WHITE if j != 1 else UI.GRAY, true, 0, 1, false, 700)
 		if i < Store.PRIZES.size() - 1:
 			UI.rect(s, Rect2(76, y + 44, 750, 1), Color(1, 1, 1, 0.06))
 
-	UI.text(s, "게임별 플레이", 17, Vector2(886, 172), UI.GRAY, false, 0, -1, true)
+	UI.text(s, "게임별 플레이", 16, Vector2(886, 174), UI.GRAY, false, 0, -1, false, 600)
 	UI.rect(s, Rect2(886, 204, 318, 1), UI.LINE)
 	var per := {}
 	for x in plays:
@@ -1090,8 +1081,8 @@ func _admin_refresh() -> void:
 		if i == 5 and names.size() > 6:
 			UI.text(s, "외 %d개 게임" % (names.size() - 5), 19, Vector2(886, y + 4), UI.GRAY, false, 0, -1, true)
 			break
-		UI.text(s, names[i], 21, Vector2(886, y + 2), UI.WHITE)
-		UI.text(s, str(per[names[i]]), 28, Vector2(1204, y), UI.WHITE, true, 1, 1)
+		UI.text(s, names[i], 20, Vector2(886, y + 3), UI.WHITE)
+		UI.text(s, str(per[names[i]]), 22, Vector2(1204, y + 2), UI.WHITE, true, 0, 1, false, 700)
 		UI.rect(s, Rect2(886, y + 33, 318, 2), Color(1, 1, 1, 0.07))
 		UI.rect(s, Rect2(886, y + 33, 318.0 * int(per[names[i]]) / top, 2), Color(Kit.GOLD, 0.8))
 
@@ -1103,7 +1094,7 @@ func _admin_type(ch: String) -> void:
 		_typed += ch
 	if ch != "":
 		Kit.sfx("tick", -8.0)
-	_code_label.text = _typed if _typed != "" else "------"
+	_code_label.text = _typed if _typed != "" else "––––––"
 	_code_label.label_settings.font_color = UI.WHITE if _typed != "" else Color(1, 1, 1, 0.16)
 
 
@@ -1114,7 +1105,7 @@ func _admin_submit() -> void:
 	var res := _redeem(code)
 	var at := str(res["at"]).replace("T", " ")
 	match res["status"]:
-		"ok": _admin_msg("완료!  %s 사용 처리  —  %s" % [code, res["prize"]], UI.MINT)
+		"ok": _admin_msg("%s 사용 처리 완료  —  %s" % [code, res["prize"]], UI.MINT)
 		"used": _admin_msg("이미 사용된 쿠폰  %s  (%s)  —  %s" % [code, at, res["prize"]], UI.RED)
 		_: _admin_msg("없는 코드  %s" % code, UI.RED)
 	Kit.sfx("coin" if res["status"] == "ok" else "error")
@@ -1126,7 +1117,7 @@ func _admin_submit() -> void:
 func _admin_msg(s: String, color: Color) -> void:
 	_msg.text = s
 	_msg.label_settings.font_color = color
-	_msg.label_settings.font = UI.font(false)
+	_msg.label_settings.font = UI.font(false, 0, false, 600)
 
 
 func _admin_export() -> void:

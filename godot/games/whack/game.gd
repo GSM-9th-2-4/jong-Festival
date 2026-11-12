@@ -23,7 +23,8 @@ const SZ := 0.43
 const RIM_Y := 0.068
 const DOWN := 0.47  # 숨었을 때 내려가는 깊이
 const PICK := [3, 4, 5]
-const TITLE := ["꽝 두더지…", "레어 두더지!", "에픽 두더지!!", "전설의 황금 두더지!!!", "크리티컬 두더지!!!!"]
+const TITLE := ["꽝 두더지", "레어 두더지", "에픽 두더지", "전설의 황금 두더지", "크리티컬 두더지"]
+const PAPER := Color(0.955, 0.94, 0.905)   # 따뜻한 흰색 (순백 대신)
 const MALLET_L := 0.5
 const MALLET_YAW := 0.5
 const CAM_POS := Vector3(0, 1.72, 1.78)
@@ -81,6 +82,7 @@ var _l_score: Label
 var _l_combo: Label
 var _l_big: Label
 var _l_title: Label
+var _title_scrim: TextureRect
 var _l_sub: Label
 var _l_hint: Label
 var _hint_box: PanelContainer
@@ -677,14 +679,53 @@ func _glass(radius := 18.0, alpha := 0.62) -> StyleBoxFlat:
 	return sb
 
 
-func _mk_label(text: String, size: float, color: Color, en := false, outline := 0.0) -> Label:
+## 글자: Pretendard 한 가지, 굵기와 크기로만 위계를 만든다. 외곽선·번짐 없음 — 장면 위에 바로 뜨는 글자는
+## 뒤에 어두운 판/막을 깔고(scrim), 그게 안 되는 작은 글자만 아래로 떨어진 옅은 그림자를 준다 (shade).
+func _mk_label(text: String, size: float, color: Color, weight := 700, num := false, shade := false) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.label_settings = Kit.label_settings(int(size * _ui_scale), color, en, int(outline * _ui_scale))
+	l.label_settings = _ls(size, color, weight, num, shade)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
+
+
+func _ls(size: float, color: Color, weight := 700, num := false, shade := false) -> LabelSettings:
+	var px := int(size * _ui_scale)
+	var ls := LabelSettings.new()
+	ls.font = Kit.font(weight, num, -int(round(px * 0.02)) if px >= 40 else 0)
+	ls.font_size = px
+	ls.font_color = color
+	if shade:
+		ls.shadow_size = 0
+		ls.shadow_color = Color(0, 0, 0, 0.5)
+		ls.shadow_offset = Vector2(0, maxf(1.0, round(px * 0.05)))
+	return ls
+
+
+func _scrim(radial: bool, alpha: float) -> TextureRect:  # 글자 뒤에 까는 부드러운 어두운 막
+	var g := Gradient.new()
+	g.set_color(0, Color(0, 0, 0.01, alpha))
+	g.set_color(1, Color(0, 0, 0.01, 0.0))
+	g.add_point(0.45, Color(0, 0, 0.01, alpha * 0.72))
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.width = 128
+	gt.height = 128
+	if radial:
+		gt.fill = GradientTexture2D.FILL_RADIAL
+		gt.fill_from = Vector2(0.5, 0.5)
+		gt.fill_to = Vector2(1.0, 0.5)
+	else:
+		gt.fill_from = Vector2(0, 0)
+		gt.fill_to = Vector2(0, 1)
+	var r := TextureRect.new()
+	r.texture = gt
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_SCALE
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
 
 
 func _build_hud() -> void:
@@ -727,12 +768,12 @@ func _build_hud() -> void:
 	sp.size = Vector2(214, 66) * k
 	sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_top.add_child(sp)
-	var cap := _mk_label("잡은 두더지", 20, Color(0.86, 0.93, 0.84))
+	var cap := _mk_label("잡은 두더지", 18, Color(PAPER, 0.8), 600)
 	cap.position = Vector2(18, 0) * k
 	cap.size = Vector2(110, 66) * k
 	sp.add_child(cap)
-	_l_score = _mk_label("0", 46, Color.WHITE, true)
-	_l_score.position = Vector2(128, 4) * k
+	_l_score = _mk_label("0", 40, PAPER, 800, true)
+	_l_score.position = Vector2(128, 0) * k
 	_l_score.size = Vector2(76, 66) * k
 	sp.add_child(_l_score)
 	# 시간 막대
@@ -747,26 +788,35 @@ func _build_hud() -> void:
 	_bar_fill.size = Vector2(430, 24) * k
 	_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bar_box.add_child(_bar_fill)
-	_l_time = _mk_label("15.0", 22, Color.WHITE, true, 5)
-	_l_time.size = Vector2(440, 38) * k
+	_l_time = _mk_label("15.0", 19, PAPER, 800, true, true)
+	_l_time.size = Vector2(440, 34) * k
 	_bar_box.add_child(_l_time)
 	# 콤보
-	_l_combo = _mk_label("", 44, Kit.GOLD, true, 8)
+	_l_combo = _mk_label("", 36, PAPER, 800, true, true)
 	_l_combo.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_l_combo.size = Vector2(320, 66) * k
 	_l_combo.position = Vector2(size.x - 348 * k, 26 * k)
 	_top.add_child(_l_combo)
 
-	_l_big = _mk_label("", 210, Color.WHITE, true, 16)
+	_l_big = _mk_label("", 210, PAPER, 900, true)
 	_l_big.size = size
 	_l_big.pivot_offset = size * 0.5
 	_ui.add_child(_l_big)
-	_l_title = _mk_label("", 84, Kit.GOLD, false, 12)
+	var big_scrim := _scrim(true, 0.62)  # 숫자 뒤 둥근 어두운 막 (글자와 함께 커지고 사라짐)
+	big_scrim.size = Vector2(520, 520) * k
+	big_scrim.position = size * 0.5 - big_scrim.size * 0.5
+	big_scrim.show_behind_parent = true
+	_l_big.add_child(big_scrim)
+	_title_scrim = _scrim(false, 0.74)  # 위쪽 제목 뒤 어두운 막
+	_title_scrim.size = Vector2(size.x, 290 * k)
+	_title_scrim.modulate.a = 0.0
+	_ui.add_child(_title_scrim)
+	_l_title = _mk_label("", 84, PAPER, 900)
 	_l_title.size = Vector2(size.x, 120 * k)
 	_l_title.position = Vector2(0, 36 * k)
 	_l_title.pivot_offset = _l_title.size * 0.5
 	_ui.add_child(_l_title)
-	_l_sub = _mk_label("", 34, Color.WHITE, false, 7)
+	_l_sub = _mk_label("", 30, Color(PAPER, 0.88), 600)
 	_l_sub.size = Vector2(size.x, 50 * k)
 	_l_sub.position = Vector2(0, 152 * k)
 	_ui.add_child(_l_sub)
@@ -781,9 +831,9 @@ func _build_hud() -> void:
 	for s in ["top", "bottom"]:
 		mg.add_theme_constant_override("margin_" + s, int(10 * k))
 	_hint_box.add_child(mg)
-	_l_hint = _mk_label("", 26, Color.WHITE)
+	_l_hint = _mk_label("", 23, PAPER, 600)
 	mg.add_child(_l_hint)
-	_set_hint("나오는 두더지를 망치로 쾅!   마우스 · 터치 · 숫자키")
+	_set_hint("나오는 두더지를 망치로 쾅  ·  마우스 · 터치 · 숫자키")
 
 
 func _set_hint(text: String) -> void:
@@ -796,9 +846,10 @@ func _set_hint(text: String) -> void:
 
 func _pop_title(text: String, color: Color, sub: String, size := 84.0) -> void:
 	_l_title.text = text
-	_l_title.label_settings = Kit.label_settings(int(size * _ui_scale), color, false, int(12 * _ui_scale))
+	_l_title.label_settings = _ls(size, color, 900)
 	_l_sub.text = sub
-	_l_title.scale = Vector2(0.3, 0.3)
+	_title_scrim.create_tween().tween_property(_title_scrim, "modulate:a", 1.0, 0.25)
+	_l_title.scale = Vector2(0.7, 0.7)
 	_l_sub.modulate.a = 0.0
 	var tw := create_tween()
 	tw.tween_property(_l_title, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -806,7 +857,7 @@ func _pop_title(text: String, color: Color, sub: String, size := 84.0) -> void:
 
 
 func _float_text(world: Vector3, text: String, color: Color) -> void:
-	var l := _mk_label(text, 44, color, true, 8)
+	var l := _mk_label(text, 38, color, 900, true, true)
 	l.size = Vector2(240, 60) * _ui_scale
 	l.position = _cam.unproject_position(world) - l.size * 0.5
 	_ui.add_child(l)
@@ -893,7 +944,7 @@ func _whack(m: Dictionary) -> void:
 		Kit.sfx("coin", -8.0)
 	_burst(head + Vector3(0, 0.1, 0.04), _star_mesh, _star_mat, 9, 1.2, 2.4, 0.55, 3.5, 0.05, 0.11)
 	_burst(_hole_pos(m["hole"]) + Vector3(0, RIM_Y, 0), _dust_mesh, _dust_mat, 22, 0.6, 1.7, 0.6, 6.0, 0.008, 0.024, 70.0)
-	_float_text(head + Vector3(0, 0.2, 0), "+1" if _combo < 3 else "+1  x%d" % _combo, Color.WHITE if _combo < 3 else Kit.GOLD)
+	_float_text(head + Vector3(0, 0.2, 0), "+1" if _combo < 3 else "+1  ×%d" % _combo, PAPER)
 	_l_score.text = str(_score)
 	_l_score.pivot_offset = _l_score.size * 0.5
 	_l_score.scale = Vector2(1.5, 1.5)
@@ -917,7 +968,7 @@ func _pick(i: int) -> void:
 	_suspense_dust.emitting = true
 	_l_title.text = ""
 	_l_sub.text = ""
-	_pop_title("두구두구두구…", Color.WHITE, "", 72.0)
+	_pop_title("두구두구두구…", PAPER, "", 72.0)
 	_set_hint("")
 	var hp := _hole_pos(i)
 	_cam_pos_to = Vector3(hp.x * 0.75, 0.86, hp.z + 1.08)
@@ -954,7 +1005,7 @@ func _process(real_dt: float) -> void:
 				_count_shown = step
 				Kit.sfx("go" if step == 3 else "tick")
 				_l_big.text = ["3", "2", "1", "시작!"][step]
-				_l_big.label_settings = Kit.label_settings(int((210 if step < 3 else 150) * _ui_scale), Color.WHITE if step < 3 else Kit.GOLD, step < 3, int(16 * _ui_scale))
+				_l_big.label_settings = _ls(210 if step < 3 else 140, PAPER, 900, step < 3)
 			var f := fmod(_t, 0.6) / 0.6
 			_l_big.scale = Vector2.ONE * (1.6 - 0.6 * _smooth(f * 2.5))
 			_l_big.modulate.a = clampf((1.0 - f) * 4.0, 0.0, 1.0)
@@ -1033,7 +1084,7 @@ func _play(_dt: float) -> void:
 	sb.set_corner_radius_all(int(12 * _ui_scale))
 	_bar_fill.add_theme_stylebox_override("panel", sb)
 	_bar_fill.size.x = maxf(24.0, 430.0 * frac) * _ui_scale
-	_l_combo.text = "%d COMBO!" % _combo if _combo >= 2 else ""
+	_l_combo.text = "%d 콤보" % _combo if _combo >= 2 else ""
 	_l_combo.pivot_offset = Vector2(_l_combo.size.x, _l_combo.size.y * 0.5)
 	_l_combo.scale = Vector2.ONE * (1.0 + 0.06 * sin(_clock * 12.0))
 	if left <= 5.0 and int(left) != _last_tick:
@@ -1049,8 +1100,8 @@ func _play(_dt: float) -> void:
 		Kit.sfx("drum", -6.0)
 		_top.visible = false
 		_dim_to = 1.0
-		_pop_title("마지막 한 방!", Kit.GOLD, "%d마리 잡았어요  ·  빛나는 구멍 하나를 골라 쾅!" % _score)
-		_set_hint("가운데 줄 구멍 하나를 터치!   (숫자키 4 · 5 · 6)")
+		_pop_title("마지막 한 방", PAPER, "%d마리 잡았어요  ·  빛나는 구멍 하나를 골라 쾅" % _score)
+		_set_hint("가운데 줄 구멍 하나를 터치  ·  숫자키 4 · 5 · 6")
 		_cam_pos_to = Vector3(0, 1.4, 1.62)
 		_cam_look_to = Vector3(0, 0.02, -0.02)
 		for fx in _pick_fx:
@@ -1129,7 +1180,7 @@ func _reveal() -> void:
 		_reveal_light.light_color = tc.lerp(Color(1.0, 0.95, 0.88), 0.8)
 		Kit.sfx("coin")
 		var size := 84.0 if rank < 3 else 72.0
-		_pop_title(TITLE[rank], tc.lerp(Color.WHITE, 0.3), "%s 등급!   %s" % [Kit.tier(rank)["kor"], prize], size)
+		_pop_title(TITLE[rank], PAPER, "%s 등급 당첨  ·  %s" % [Kit.tier(rank)["kor"], prize], size)
 		_celebrate3d(hp)
 		var dur: float = Kit.celebrate(rank, prize, false)
 		await get_tree().create_timer(dur + 0.9).timeout
@@ -1138,7 +1189,7 @@ func _reveal() -> void:
 		_reveal_light.light_color = Color(0.75, 0.82, 1.0)
 		Kit.sfx("groan")
 		Kit.sfx("lose", -6.0)
-		_pop_title(TITLE[0], Color(0.8, 0.84, 0.95), "메롱~  다음 기회에!")
+		_pop_title(TITLE[0], Color(PAPER, 0.85), "메롱~  다음 기회에 만나요")
 		await get_tree().create_timer(2.7).timeout
 	_end(true)
 

@@ -291,7 +291,7 @@ func _boom(lv: int) -> void:  # 등급 선 돌파
 	_stage.flash_light(p + Vector3(0, 0, 0.4), c, 7.0, 0.5)
 	_hud.flash(0.5, 0.3, c.lerp(Color.WHITE, 0.6))
 	_hud.light_tier(lv)
-	_hud.stamp(Kit.tier(lv)["name"] + "!".repeat(lv), c)
+	_hud.stamp(lv)
 
 
 func _land() -> void:

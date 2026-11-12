@@ -456,7 +456,7 @@ func _machine() -> void:
 	for lv in range(1, 5):
 		var v: int = [0, 600, 750, 900, 999][lv]
 		var c: Color = Kit.tier(lv)["color"]
-		var l := _text3d(str(v), 0.017, c.lerp(Color.WHITE, 0.25), Vector3(-0.30 + 0.60 * v / 999.0, 1.842, 0.3895), m,
+		var l := _text3d(str(v), 0.012, c.lerp(Color.WHITE, 0.25), Vector3(-0.30 + 0.60 * v / 999.0, 1.842, 0.3895), m,
 				HORIZONTAL_ALIGNMENT_RIGHT if lv == 4 else HORIZONTAL_ALIGNMENT_CENTER)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		if lv == 4:
